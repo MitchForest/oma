@@ -103,16 +103,23 @@ function reviewHarness(input: {
 export async function runReview(input: {
   cwd: string;
   configPath?: string;
+  workspacePath?: string;
   context: PullRequestContext;
   fixtureFindings?: ReviewFindingsArtifact;
   openAIApiKey?: string;
   openAIModel?: string;
   openAIReasoningEffort?: ReasoningEffort;
 }): Promise<ReviewRunResult> {
-  const project = await loadProject({
+  const loadedProject = await loadProject({
     cwd: input.cwd,
     configPath: input.configPath ?? "examples/github-pr-review/oma.config.json",
   });
+  const project = input.workspacePath
+    ? {
+        ...loadedProject,
+        workspace: resolve(input.workspacePath),
+      }
+    : loadedProject;
   const objective = buildReviewObjective(input.context);
 
   await writeArtifactFile(

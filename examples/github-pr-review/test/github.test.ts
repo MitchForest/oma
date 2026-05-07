@@ -97,6 +97,21 @@ describe("GitHub client", () => {
         marker: summaryMarker,
         body: `${summaryMarker}\n\nReview body`,
       },
+      ledger: {
+        schemaVersion: 1,
+        runNumber: 1,
+        headSha: "head",
+        updatedAt: "2026-05-07T00:00:00.000Z",
+        findings: [],
+      },
+      stats: {
+        newFindings: 0,
+        stillOpen: 0,
+        resolvedSinceLastRun: 0,
+        suppressed: 0,
+        inlinePosted: 1,
+        totalOpen: 0,
+      },
       inline: [
         {
           findingId: "finding-1",
@@ -141,5 +156,46 @@ describe("GitHub client", () => {
       "POST /repos/oma/example/pulls/7/reviews",
     ]);
     expect(writes[1]?.body).toContain("oma-finding:finding-1");
+  });
+
+  test("sets commit statuses and final reactions", async () => {
+    const writes: Array<{ method: string; path: string; body?: string }> = [];
+    const client = new GithubClient({
+      token: "secret-token",
+      fetch: async (url, init) => {
+        const write: { method: string; path: string; body?: string } = {
+          method: init?.method ?? "GET",
+          path: String(url).replace("https://api.github.com", ""),
+        };
+        if (typeof init?.body === "string") {
+          write.body = init.body;
+        }
+        writes.push(write);
+        return jsonResponse({});
+      },
+    });
+
+    await client.setReviewStatus(
+      {
+        ...request,
+        pullRequest: {
+          ...request.pullRequest,
+          headSha: "head",
+        },
+      },
+      {
+        state: "pending",
+        description: "Review in progress",
+        targetUrl: "https://example.test/run",
+      },
+    );
+    await client.addReaction(request, 42, "+1");
+
+    expect(writes.map((write) => `${write.method} ${write.path}`)).toEqual([
+      "POST /repos/oma/example/statuses/head",
+      "POST /repos/oma/example/issues/comments/42/reactions",
+    ]);
+    expect(writes[0]?.body).toContain('"context":"OMA PR Review"');
+    expect(writes[1]?.body).toContain('"+1"');
   });
 });

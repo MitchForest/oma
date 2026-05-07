@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { planReviewComments } from "../src/comments";
+import { parseReviewLedger, planReviewComments } from "../src/comments";
 import type { PullRequestContext, ReviewFindingsArtifact } from "../src/types";
 
 const context: PullRequestContext = {
@@ -66,6 +66,8 @@ describe("comment planning", () => {
     expect(plan.inline).toHaveLength(1);
     expect(plan.inline[0]?.path).toBe("src/app.ts");
     expect(plan.inline[0]?.line).toBe(2);
+    expect(plan.stats.newFindings).toBe(1);
+    expect(plan.summary.body).toContain("Still open: 0.");
   });
 
   test("suppresses duplicate finding ids", () => {
@@ -78,5 +80,39 @@ describe("comment planning", () => {
     });
     expect(plan.inline).toHaveLength(0);
     expect(plan.skipped[0]?.reason).toBe("duplicate finding id");
+  });
+
+  test("tracks resolved findings across reruns", () => {
+    const firstPlan = planReviewComments({ context, artifact });
+    const secondPlan = planReviewComments({
+      context: {
+        ...context,
+        previousLedger: firstPlan.ledger,
+      },
+      artifact: {
+        schemaVersion: 1,
+        summary: "Clean.",
+        findings: [],
+      },
+    });
+
+    expect(secondPlan.stats.resolvedSinceLastRun).toBe(1);
+    expect(secondPlan.summary.body).toContain("Resolved since last run: 1.");
+    expect(parseReviewLedger(secondPlan.summary.body)?.findings[0]?.status).toBe("resolved");
+  });
+
+  test("does not repost inline comments for still-open ledger findings", () => {
+    const firstPlan = planReviewComments({ context, artifact });
+    const secondPlan = planReviewComments({
+      context: {
+        ...context,
+        previousLedger: firstPlan.ledger,
+      },
+      artifact,
+    });
+
+    expect(secondPlan.inline).toHaveLength(0);
+    expect(secondPlan.skipped[0]?.reason).toBe("duplicate open finding");
+    expect(secondPlan.stats.stillOpen).toBe(1);
   });
 });

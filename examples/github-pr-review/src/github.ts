@@ -4,8 +4,10 @@ import type {
   ReviewCommentPlan,
   ReviewRequest,
 } from "./types";
+import { parseReviewLedger } from "./comments";
+import { summaryMarker } from "./markers";
 
-export const summaryMarker = "<!-- oma-pr-review:summary -->";
+export { summaryMarker } from "./markers";
 
 export type FetchLike = (
   input: Parameters<typeof fetch>[0],
@@ -37,6 +39,16 @@ type GithubPullRequest = {
     ref?: string;
     sha?: string;
   };
+};
+
+type ReactionContent = "+1" | "confused" | "eyes";
+
+type CommitStatusState = "error" | "failure" | "pending" | "success";
+
+export type ReviewCommitStatus = {
+  state: CommitStatusState;
+  description: string;
+  targetUrl?: string | undefined;
 };
 
 function assertRecord(value: unknown, label: string): Record<string, unknown> {
@@ -102,16 +114,58 @@ export class GithubClient {
     return await response.text();
   }
 
-  async addEyesReaction(request: ReviewRequest, commentId: number): Promise<void> {
-    await this.request(
-      "POST",
-      `/repos/${request.repository.fullName}/issues/comments/${String(commentId)}/reactions`,
-      "add reaction",
+  async addReaction(
+    request: ReviewRequest,
+    commentId: number,
+    content: ReactionContent,
+  ): Promise<void> {
+    const response = await this.fetchImpl(
+      `${this.apiUrl}/repos/${request.repository.fullName}/issues/comments/${String(commentId)}/reactions`,
       {
-        body: JSON.stringify({ content: "eyes" }),
+        method: "POST",
         headers: {
           accept: "application/vnd.github.squirrel-girl-preview+json",
+          authorization: `Bearer ${this.token}`,
+          "content-type": "application/json",
+          "x-github-api-version": "2022-11-28",
         },
+        body: JSON.stringify({ content }),
+      },
+    );
+    if (response.status === 422) {
+      return;
+    }
+    await readJson<unknown>(response, "add reaction");
+  }
+
+  async addEyesReaction(request: ReviewRequest, commentId: number): Promise<void> {
+    await this.addReaction(request, commentId, "eyes");
+  }
+
+  async setReviewStatus(request: ReviewRequest, status: ReviewCommitStatus): Promise<void> {
+    const sha = request.pullRequest.headSha;
+    if (!sha) {
+      return;
+    }
+    const body: {
+      state: CommitStatusState;
+      context: string;
+      description: string;
+      target_url?: string;
+    } = {
+      state: status.state,
+      context: "OMA PR Review",
+      description: status.description.slice(0, 140),
+    };
+    if (status.targetUrl) {
+      body.target_url = status.targetUrl;
+    }
+    await this.request(
+      "POST",
+      `/repos/${request.repository.fullName}/statuses/${sha}`,
+      "set commit status",
+      {
+        body: JSON.stringify(body),
       },
     );
   }
@@ -161,11 +215,15 @@ export class GithubClient {
     };
     if (existingSummary) {
       context.existingSummaryCommentId = existingSummary.id;
+      const previousLedger = parseReviewLedger(existingSummary.body ?? "");
+      if (previousLedger) {
+        context.previousLedger = previousLedger;
+      }
     }
     return context;
   }
 
-  async upsertSummary(request: ReviewRequest, plan: ReviewCommentPlan): Promise<void> {
+  async upsertSummaryBody(request: ReviewRequest, body: string): Promise<void> {
     const repo = request.repository.fullName;
     const number = String(request.pullRequest.number);
     const comments = await this.request<GithubComment[]>(
@@ -180,15 +238,19 @@ export class GithubClient {
         `/repos/${repo}/issues/comments/${String(existing.id)}`,
         "update summary",
         {
-          body: JSON.stringify({ body: plan.summary.body }),
+          body: JSON.stringify({ body }),
         },
       );
       return;
     }
 
     await this.request("POST", `/repos/${repo}/issues/${number}/comments`, "create summary", {
-      body: JSON.stringify({ body: plan.summary.body }),
+      body: JSON.stringify({ body }),
     });
+  }
+
+  async upsertSummary(request: ReviewRequest, plan: ReviewCommentPlan): Promise<void> {
+    await this.upsertSummaryBody(request, plan.summary.body);
   }
 
   async publishInlineReview(request: ReviewRequest, plan: ReviewCommentPlan): Promise<void> {

@@ -100,7 +100,26 @@ Add `OPENAI_API_KEY` at:
 GitHub -> Settings -> Secrets and variables -> Actions -> New repository secret
 ```
 
-GitHub supplies `GITHUB_TOKEN` automatically to Actions. The workflow limits it to `contents: read`, `issues: write`, and `pull-requests: write`.
+GitHub supplies `GITHUB_TOKEN` automatically to Actions. The workflow limits it to `contents: read`, `issues: write`, `pull-requests: write`, and `statuses: write`.
+
+## GitHub Lifecycle
+
+The workflow runs trusted reviewer code from the default branch and checks out the PR head into a separate workspace. That lets comment-triggered reviews use the latest reviewer implementation even when the PR being reviewed is older.
+
+On manual triggers, the reviewer:
+
+```text
+adds an eyes reaction
+posts a pending OMA PR Review commit status on the PR head SHA
+upserts a sticky in-progress summary comment
+runs the read-only review harness
+updates the sticky summary with current findings and lifecycle counts
+posts inline comments only for eligible new findings
+marks the commit status complete
+adds a thumbs-up reaction when no findings are present
+```
+
+The sticky summary stores a hidden ledger so later runs can distinguish new, still-open, and resolved findings without reposting the same inline comment.
 
 ## Output Artifacts
 

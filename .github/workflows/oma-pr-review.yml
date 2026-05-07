@@ -8,6 +8,7 @@ permissions:
   contents: read
   issues: write
   pull-requests: write
+  statuses: write
 
 jobs:
   review:
@@ -16,6 +17,8 @@ jobs:
     steps:
       - name: Checkout trusted workflow code
         uses: actions/checkout@v4
+        with:
+          path: reviewer
 
       - name: Resolve PR head
         id: pr
@@ -40,6 +43,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ steps.pr.outputs.sha }}
+          path: workspace
 
       - name: Setup Bun
         if: steps.pr.outputs.skip != 'true'
@@ -47,15 +51,18 @@ jobs:
 
       - name: Install
         if: steps.pr.outputs.skip != 'true'
+        working-directory: reviewer
         run: bun install --frozen-lockfile
 
       - name: Review PR
         if: steps.pr.outputs.skip != 'true'
-        run: bun run examples/github-pr-review/src/index.ts -- --dry-run=false
+        working-directory: reviewer
+        run: bun run examples/github-pr-review/src/index.ts -- --dry-run false --workspace "$GITHUB_WORKSPACE/workspace"
         env:
           GITHUB_EVENT_PATH: ${{ github.event_path }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_ACTION_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           OPENAI_MODEL: ${{ vars.OPENAI_MODEL || 'gpt-5.5' }}
           OPENAI_REASONING_EFFORT: ${{ vars.OPENAI_REASONING_EFFORT || 'medium' }}
@@ -65,4 +72,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: oma-pr-review
-          path: .oma
+          path: reviewer/examples/github-pr-review/.oma

@@ -1,14 +1,21 @@
 #!/usr/bin/env bun
 import { readFile } from "node:fs/promises";
+import { renderInProgressSummary } from "./comments";
 import { GithubClient, commentIdFromGithubEvent } from "./github";
 import { loadFixtureContext, loadFixtureFindings } from "./fixtures";
 import { runReview } from "./run";
 import { reviewRequestFromFixture, reviewRequestFromGithubEvent } from "./trigger";
+import type { PullRequestContext, ReviewRunResult } from "./types";
 import type { ReasoningEffort } from "./openai-reviewer";
 
 function argValue(args: string[], name: string): string | undefined {
   const index = args.indexOf(name);
-  return index >= 0 ? args[index + 1] : undefined;
+  if (index >= 0) {
+    return args[index + 1];
+  }
+  const prefix = `${name}=`;
+  const inline = args.find((arg) => arg.startsWith(prefix));
+  return inline ? inline.slice(prefix.length) : undefined;
 }
 
 function boolArg(args: string[], name: string, defaultValue: boolean): boolean {
@@ -34,9 +41,12 @@ async function main(): Promise<number> {
   const fixtureDir = argValue(args, "--fixture");
   const dryRun = boolArg(args, "--dry-run", true);
   const cwd = process.cwd();
+  const runUrl = process.env.GITHUB_ACTION_RUN_URL;
 
-  let context;
+  let context: PullRequestContext;
   let fixtureFindings;
+  let client: GithubClient | undefined;
+  let triggerCommentId: number | undefined;
 
   if (fixtureDir) {
     const request = await reviewRequestFromFixture(fixtureDir);
@@ -60,19 +70,35 @@ async function main(): Promise<number> {
     if (!token) {
       throw new Error("GITHUB_TOKEN is required for non-fixture runs.");
     }
-    const client = new GithubClient({ token });
+    client = new GithubClient({ token });
     const event = JSON.parse(await readFile(eventPath, "utf8")) as unknown;
-    const commentId = commentIdFromGithubEvent(event);
-    if (commentId) {
-      await client.addEyesReaction(request, commentId);
-    }
+    triggerCommentId = commentIdFromGithubEvent(event);
     context = await client.fetchPullRequestContext(request);
+    if (triggerCommentId) {
+      await client.addEyesReaction(context.request, triggerCommentId);
+    }
+    await client.setReviewStatus(context.request, {
+      state: "pending",
+      description: "Review in progress",
+      targetUrl: runUrl,
+    });
+    await client.upsertSummaryBody(
+      context.request,
+      renderInProgressSummary({
+        context,
+        runUrl,
+      }),
+    );
   }
 
   const runInput: Parameters<typeof runReview>[0] = {
     cwd,
     context,
   };
+  const workspacePath = argValue(args, "--workspace") ?? process.env.OMA_REVIEW_WORKSPACE;
+  if (workspacePath) {
+    runInput.workspacePath = workspacePath;
+  }
   if (fixtureFindings) {
     runInput.fixtureFindings = fixtureFindings;
   }
@@ -90,7 +116,22 @@ async function main(): Promise<number> {
     runInput.openAIReasoningEffort = effort;
   }
 
-  const result = await runReview(runInput);
+  let result: ReviewRunResult;
+  try {
+    result = await runReview(runInput);
+  } catch (error) {
+    if (client && !fixtureDir) {
+      await client.setReviewStatus(context.request, {
+        state: "failure",
+        description: "Review failed",
+        targetUrl: runUrl,
+      });
+      if (triggerCommentId) {
+        await client.addReaction(context.request, triggerCommentId, "confused");
+      }
+    }
+    throw error;
+  }
 
   if (dryRun || fixtureDir) {
     console.log(
@@ -103,9 +144,20 @@ async function main(): Promise<number> {
   if (!token) {
     throw new Error("GITHUB_TOKEN is required to publish review output.");
   }
-  const client = new GithubClient({ token });
+  client = client ?? new GithubClient({ token });
   await client.upsertSummary(context.request, result.plan);
   await client.publishInlineReview(context.request, result.plan);
+  await client.setReviewStatus(context.request, {
+    state: result.outcome.status === "succeeded" ? "success" : "failure",
+    description:
+      result.findings.findings.length === 0
+        ? "No high-signal findings"
+        : `${String(result.plan.stats.totalOpen)} open findings, ${String(result.plan.stats.resolvedSinceLastRun)} resolved`,
+    targetUrl: runUrl,
+  });
+  if (triggerCommentId && result.findings.findings.length === 0) {
+    await client.addReaction(context.request, triggerCommentId, "+1");
+  }
 
   return result.outcome.status === "succeeded" ? 0 : 1;
 }

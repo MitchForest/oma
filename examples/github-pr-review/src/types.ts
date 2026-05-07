@@ -39,6 +39,7 @@ export type PullRequestContext = {
   diff: string;
   existingSummaryCommentId?: number;
   existingFindingIds: string[];
+  previousLedger?: ReviewLedger;
 };
 
 export type ReviewRisk = "high" | "medium" | "low";
@@ -81,6 +82,37 @@ export type ReviewFindingsArtifact = {
   findings: ReviewFinding[];
 };
 
+export type ReviewLedgerFinding = {
+  fingerprint: string;
+  findingId: string;
+  title: string;
+  file: string;
+  line: number;
+  risk: ReviewRisk;
+  category: ReviewCategory;
+  status: "open" | "resolved";
+  firstSeenHeadSha: string;
+  lastSeenHeadSha: string;
+  resolvedAt?: string;
+};
+
+export type ReviewLedger = {
+  schemaVersion: 1;
+  runNumber: number;
+  headSha: string;
+  updatedAt: string;
+  findings: ReviewLedgerFinding[];
+};
+
+export type ReviewLedgerStats = {
+  newFindings: number;
+  stillOpen: number;
+  resolvedSinceLastRun: number;
+  suppressed: number;
+  inlinePosted: number;
+  totalOpen: number;
+};
+
 export type ReviewPolicy = {
   maxInlineComments: number;
   inlineRisk: ReviewRisk[];
@@ -93,6 +125,8 @@ export type ReviewCommentPlan = {
     marker: string;
     body: string;
   };
+  ledger: ReviewLedger;
+  stats: ReviewLedgerStats;
   inline: Array<{
     findingId: string;
     path: string;
