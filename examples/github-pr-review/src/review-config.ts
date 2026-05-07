@@ -142,6 +142,9 @@ export async function loadReviewConfig(input: {
 }
 
 function safeInstructionPath(path: string): string {
+  if (path.includes("\\")) {
+    throw new Error(`review instruction path must use forward slashes: ${path}`);
+  }
   if (isAbsolute(path) || path.split(/[\\/]/).includes("..")) {
     throw new Error(`review instruction path must be repository-relative: ${path}`);
   }

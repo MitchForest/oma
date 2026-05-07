@@ -87,6 +87,26 @@ describe("review config", () => {
     }
   });
 
+  test("rejects backslash instruction paths", async () => {
+    const workspace = await tempDir();
+    try {
+      await expect(
+        loadRepositoryInstructions({
+          workspace,
+          files: [".git\\config"],
+        }),
+      ).rejects.toThrow("forward slashes");
+      await expect(
+        loadRepositoryInstructions({
+          workspace,
+          files: ["docs\\AGENTS.md"],
+        }),
+      ).rejects.toThrow("forward slashes");
+    } finally {
+      await rm(workspace, { recursive: true, force: true });
+    }
+  });
+
   test("rejects sensitive and symlinked instruction paths", async () => {
     const workspace = await tempDir();
     try {
