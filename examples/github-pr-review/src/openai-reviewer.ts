@@ -482,6 +482,21 @@ function findingsFromResponse(response: ResponsesBody): ReviewFindingsArtifact {
   throw new Error(`OpenAI review returned invalid JSON: ${text.slice(0, 500)}`);
 }
 
+async function toolOutput(input: {
+  environment: BoundEnvironment;
+  name: string;
+  args: Record<string, unknown>;
+  maxReadBytes: number;
+  maxCommandBytes: number;
+}): Promise<string> {
+  try {
+    return await executeTool(input);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return `Tool ${input.name} failed: ${message}`;
+  }
+}
+
 export function openAIReadOnlyReviewHarness(input: OpenAIReviewHarnessInput): Harness {
   return {
     id: "openai-readonly-review",
@@ -530,7 +545,7 @@ export function openAIReadOnlyReviewHarness(input: OpenAIReviewHarnessInput): Ha
 
         conversation.push(...(response.output ?? []));
         for (const call of calls) {
-          const result = await executeTool({
+          const result = await toolOutput({
             environment: harnessInput.environment,
             name: call.name,
             args: assertToolArgs(call.arguments),

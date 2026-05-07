@@ -270,6 +270,101 @@ describe("OpenAI read-only reviewer harness", () => {
     );
   });
 
+  test("returns tool errors as model context instead of failing the run", async () => {
+    const requestBodies: unknown[] = [];
+    let requestCount = 0;
+    const harness = openAIReadOnlyReviewHarness({
+      apiKey: "test-key",
+      context,
+      fetch: async (_url, init) => {
+        const body = JSON.parse(String(init?.body)) as unknown;
+        requestBodies.push(body);
+        requestCount += 1;
+        if (requestCount === 1) {
+          return new Response(
+            JSON.stringify({
+              output: [
+                {
+                  type: "function_call",
+                  call_id: "call_1",
+                  name: "read_file",
+                  arguments: JSON.stringify({ path: "missing.ts" }),
+                },
+              ],
+            }),
+          );
+        }
+        return new Response(
+          JSON.stringify({
+            output_text: JSON.stringify({
+              schemaVersion: 1,
+              summary: "No high-signal findings.",
+              findings: [],
+            }),
+          }),
+        );
+      },
+    });
+
+    const result = await harness.run({
+      runId: "run_test",
+      objective: {
+        goal: "review",
+        constraints: [],
+        success: [],
+      },
+      session: {
+        id: "session_test",
+        append: async (event) =>
+          ({
+            ...event,
+            id: "event_test",
+            schemaVersion: 1,
+            sequence: 1,
+            sessionId: "session_test",
+          }) as Event,
+        events: async () => [],
+      } as Session,
+      observe: async (event) => ({
+        id: "event_observed",
+        schemaVersion: 1,
+        sequence: 1,
+        sessionId: "session_test",
+        runId: "run_test",
+        type: "harness.observed",
+        at: new Date().toISOString(),
+        data: {
+          harnessId: "openai-readonly-review",
+          ...event,
+        },
+      }),
+      environment: {
+        kind: "test",
+        capabilities: {
+          filesystem: true,
+          git: true,
+          securityBoundary: false,
+          shell: true,
+        },
+        filesystem: {
+          list: async () => [],
+          readText: async () => {
+            throw new Error("ENOENT missing.ts");
+          },
+          writeText: async () => {
+            throw new Error("writeText should not be exposed through reviewer tools.");
+          },
+        },
+      },
+    });
+
+    expect(result.artifacts.map((artifact) => artifact.name)).toContain(
+      ".oma/pr-review-findings.json",
+    );
+    const secondInput = JSON.stringify((requestBodies[1] as { input?: unknown }).input);
+    expect(secondInput.includes("Tool read_file failed: ENOENT missing.ts")).toBe(true);
+  });
+
   test("accepts fenced JSON output from the final response", async () => {
     const harness = openAIReadOnlyReviewHarness({
       apiKey: "test-key",
