@@ -458,7 +458,28 @@ function findingsFromResponse(response: ResponsesBody): ReviewFindingsArtifact {
   if (!text) {
     throw new Error("OpenAI review completed without text output.");
   }
-  return JSON.parse(text) as ReviewFindingsArtifact;
+  const candidates = [
+    text,
+    text
+      .trim()
+      .replace(/^```(?:json)?\s*/i, "")
+      .replace(/\s*```$/i, ""),
+  ];
+  const firstBrace = text.indexOf("{");
+  const lastBrace = text.lastIndexOf("}");
+  if (firstBrace >= 0 && lastBrace > firstBrace) {
+    candidates.push(text.slice(firstBrace, lastBrace + 1));
+  }
+
+  for (const candidate of candidates) {
+    try {
+      return JSON.parse(candidate) as ReviewFindingsArtifact;
+    } catch {
+      continue;
+    }
+  }
+
+  throw new Error(`OpenAI review returned invalid JSON: ${text.slice(0, 500)}`);
 }
 
 export function openAIReadOnlyReviewHarness(input: OpenAIReviewHarnessInput): Harness {

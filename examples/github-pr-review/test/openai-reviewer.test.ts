@@ -269,4 +269,65 @@ describe("OpenAI read-only reviewer harness", () => {
       ".oma/pr-review-findings.json",
     );
   });
+
+  test("accepts fenced JSON output from the final response", async () => {
+    const harness = openAIReadOnlyReviewHarness({
+      apiKey: "test-key",
+      context,
+      fetch: async () =>
+        new Response(
+          JSON.stringify({
+            output_text:
+              '```json\n{"schemaVersion":1,"summary":"No high-signal findings.","findings":[]}\n```',
+          }),
+        ),
+    });
+
+    const result = await harness.run({
+      runId: "run_test",
+      objective: {
+        goal: "review",
+        constraints: [],
+        success: [],
+      },
+      session: {
+        id: "session_test",
+        append: async (event) =>
+          ({
+            ...event,
+            id: "event_test",
+            schemaVersion: 1,
+            sequence: 1,
+            sessionId: "session_test",
+          }) as Event,
+        events: async () => [],
+      } as Session,
+      observe: async (event) => ({
+        id: "event_observed",
+        schemaVersion: 1,
+        sequence: 1,
+        sessionId: "session_test",
+        runId: "run_test",
+        type: "harness.observed",
+        at: new Date().toISOString(),
+        data: {
+          harnessId: "openai-readonly-review",
+          ...event,
+        },
+      }),
+      environment: {
+        kind: "test",
+        capabilities: {
+          filesystem: true,
+          git: true,
+          securityBoundary: false,
+          shell: true,
+        },
+      },
+    });
+
+    expect(result.artifacts.map((artifact) => artifact.name)).toContain(
+      ".oma/pr-review-findings.json",
+    );
+  });
 });
