@@ -1,0 +1,29 @@
+{
+  "name": "@oma/server",
+  "version": "0.0.0",
+  "private": true,
+  "files": [
+    "dist"
+  ],
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@oma/environment-local": "workspace:*",
+    "@oma/harness-claude-code": "workspace:*",
+    "@oma/harness-codex-cli": "workspace:*",
+    "@oma/harness-opencode": "workspace:*",
+    "@oma/harness-pi": "workspace:*",
+    "@oma/project": "workspace:*",
+    "@oma/runtime": "workspace:*",
+    "@oma/session-sqlite": "workspace:*"
+  }
+}
