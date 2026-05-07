@@ -10,5 +10,6 @@
     "pnpm-lock.yaml",
     "yarn.lock"
   ],
-  "instructionFiles": [".oma/pr-review.md", "AGENTS.md", "CLAUDE.md", ".cursor/BUGBOT.md"]
+  "instructionFiles": [".oma/pr-review.md", "AGENTS.md", "CLAUDE.md", ".cursor/BUGBOT.md"],
+  "maxInstructionBytes": 24000
 }

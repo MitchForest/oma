@@ -40,6 +40,7 @@ describe("review config", () => {
       expect(config.inlineRisk).toEqual(["high", "medium"]);
       expect(config.excludePaths).toEqual(["generated/**"]);
       expect(config.instructionFiles).toEqual(["AGENTS.md"]);
+      expect(config.maxInstructionBytes).toBe(24000);
     } finally {
       await rm(root, { recursive: true, force: true });
     }
@@ -120,6 +121,23 @@ describe("review config", () => {
       ).rejects.toThrow("explicit review config was not found");
     } finally {
       await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  test("caps loaded repository instruction content", async () => {
+    const workspace = await tempDir();
+    try {
+      await writeFile(join(workspace, "AGENTS.md"), "0123456789");
+
+      const instructions = await loadRepositoryInstructions({
+        workspace,
+        files: ["AGENTS.md"],
+        maxBytes: 4,
+      });
+
+      expect(instructions[0]?.content).toBe("0123\n... truncated");
+    } finally {
+      await rm(workspace, { recursive: true, force: true });
     }
   });
 });

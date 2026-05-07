@@ -1,4 +1,4 @@
-import { lstat, readFile, realpath } from "node:fs/promises";
+import { lstat, open, readFile, realpath } from "node:fs/promises";
 import { isAbsolute, relative, resolve } from "node:path";
 import type {
   RepositoryInstruction,
@@ -17,6 +17,7 @@ export const defaultReviewConfig: ReviewConfig = {
   inlineConfidence: ["high", "medium"],
   excludePaths: ["dist/**", "bun.lock", "package-lock.json"],
   instructionFiles: [".oma/pr-review.md", "AGENTS.md", "CLAUDE.md", ".cursor/BUGBOT.md"],
+  maxInstructionBytes: 24_000,
 };
 
 export const defaultReviewPolicy: ReviewPolicy = {
@@ -33,6 +34,7 @@ function defaultConfig(): ReviewConfig {
     inlineConfidence: [...defaultReviewConfig.inlineConfidence],
     excludePaths: [...defaultReviewConfig.excludePaths],
     instructionFiles: [...defaultReviewConfig.instructionFiles],
+    maxInstructionBytes: defaultReviewConfig.maxInstructionBytes,
   };
 }
 
@@ -124,6 +126,10 @@ export async function loadReviewConfig(input: {
     value: object.instructionFiles,
     field: "instructionFiles",
   });
+  const maxInstructionBytes = readPositiveInteger(
+    object.maxInstructionBytes,
+    "maxInstructionBytes",
+  );
 
   return {
     maxInlineComments: maxInlineComments ?? defaultReviewConfig.maxInlineComments,
@@ -131,6 +137,7 @@ export async function loadReviewConfig(input: {
     inlineConfidence: inlineConfidence ?? [...defaultReviewConfig.inlineConfidence],
     excludePaths: excludePaths ?? [...defaultReviewConfig.excludePaths],
     instructionFiles: instructionFiles ?? [...defaultReviewConfig.instructionFiles],
+    maxInstructionBytes: maxInstructionBytes ?? defaultReviewConfig.maxInstructionBytes,
   };
 }
 
@@ -155,11 +162,25 @@ function isInside(root: string, path: string): boolean {
   return Boolean(relativePath) && !relativePath.startsWith("..") && !isAbsolute(relativePath);
 }
 
+async function readTextFileCapped(path: string, maxBytes: number): Promise<string> {
+  const handle = await open(path, "r");
+  try {
+    const buffer = Buffer.alloc(maxBytes + 1);
+    const { bytesRead } = await handle.read(buffer, 0, maxBytes + 1, 0);
+    const content = buffer.subarray(0, Math.min(bytesRead, maxBytes)).toString("utf8");
+    return bytesRead > maxBytes ? `${content}\n... truncated` : content;
+  } finally {
+    await handle.close();
+  }
+}
+
 export async function loadRepositoryInstructions(input: {
   workspace: string;
   files: string[];
+  maxBytes?: number;
 }): Promise<RepositoryInstruction[]> {
   const instructions: RepositoryInstruction[] = [];
+  const maxBytes = input.maxBytes ?? defaultReviewConfig.maxInstructionBytes;
   const workspaceReal = await realpath(input.workspace);
   for (const file of input.files) {
     const safePath = safeInstructionPath(file);
@@ -178,7 +199,7 @@ export async function loadRepositoryInstructions(input: {
       }
       instructions.push({
         path: safePath,
-        content: await readFile(resolved, "utf8"),
+        content: await readTextFileCapped(resolved, maxBytes),
       });
     } catch (error) {
       if (error instanceof Error && "code" in error && error.code === "ENOENT") {

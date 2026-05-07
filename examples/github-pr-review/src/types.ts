@@ -128,6 +128,7 @@ export type ReviewPolicy = {
 
 export type ReviewConfig = ReviewPolicy & {
   instructionFiles: string[];
+  maxInstructionBytes: number;
 };
 
 export type ReviewCommentPlan = {

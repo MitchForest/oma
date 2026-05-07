@@ -99,6 +99,11 @@ async function main(): Promise<number> {
   if (workspacePath) {
     runInput.workspacePath = workspacePath;
   }
+  const instructionWorkspacePath =
+    argValue(args, "--instruction-workspace") ?? process.env.OMA_REVIEW_INSTRUCTION_WORKSPACE;
+  if (instructionWorkspacePath) {
+    runInput.instructionWorkspacePath = instructionWorkspacePath;
+  }
   const reviewConfigPath = argValue(args, "--review-config");
   if (reviewConfigPath) {
     runInput.reviewConfigPath = reviewConfigPath;

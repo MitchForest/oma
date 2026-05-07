@@ -116,6 +116,7 @@ export async function runReview(input: {
   cwd: string;
   configPath?: string;
   workspacePath?: string;
+  instructionWorkspacePath?: string;
   reviewConfigPath?: string;
   context: PullRequestContext;
   fixtureFindings?: ReviewFindingsArtifact;
@@ -138,8 +139,11 @@ export async function runReview(input: {
     configPath: input.reviewConfigPath,
   });
   const repositoryInstructions = await loadRepositoryInstructions({
-    workspace: project.workspace,
+    workspace: input.instructionWorkspacePath
+      ? resolve(input.instructionWorkspacePath)
+      : project.workspace,
     files: reviewConfig.instructionFiles,
+    maxBytes: reviewConfig.maxInstructionBytes,
   });
   const context: PullRequestContext = {
     ...input.context,
