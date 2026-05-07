@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "summary": "The PR changes billing sync behavior. One high-confidence issue should be addressed before merge.",
+  "findings": [
+    {
+      "id": "billing-deleted-user-sync",
+      "severity": "high",
+      "confidence": "high",
+      "file": "src/billing.ts",
+      "line": 11,
+      "side": "RIGHT",
+      "title": "Deleted users can still update billing records",
+      "body": "The new billing update runs whenever a customer id exists, but the function no longer checks whether the user has been deleted. That can revive or mutate billing records for deleted accounts.",
+      "suggestion": "Return before updating billing when `user.deletedAt` is set.",
+      "evidence": [
+        "The added line updates the external customer record without checking deletion state."
+      ]
+    }
+  ]
+}

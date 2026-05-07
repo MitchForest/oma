@@ -11,6 +11,17 @@
         "typescript": "5.9.3",
       },
     },
+    "examples/github-pr-review": {
+      "name": "@oma/example-github-pr-review",
+      "dependencies": {
+        "@oma/project": "workspace:*",
+        "@oma/runtime": "workspace:*",
+      },
+      "devDependencies": {
+        "@types/bun": "1.3.13",
+        "typescript": "5.9.3",
+      },
+    },
     "packages/cli": {
       "name": "@oma/cli",
       "version": "0.0.0",
@@ -115,6 +126,8 @@
     "@oma/cli": ["@oma/cli@workspace:packages/cli"],
 
     "@oma/environment-local": ["@oma/environment-local@workspace:packages/environments/local"],
+
+    "@oma/example-github-pr-review": ["@oma/example-github-pr-review@workspace:examples/github-pr-review"],
 
     "@oma/harness-claude-code": ["@oma/harness-claude-code@workspace:packages/harnesses/claude-code"],
 

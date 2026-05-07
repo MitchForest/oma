@@ -1,0 +1,9 @@
+diff --git a/src/billing.ts b/src/billing.ts
+index 1111111..2222222 100644
+--- a/src/billing.ts
++++ b/src/billing.ts
+@@ -10,3 +10,4 @@ export function syncUser(user: User) {
+   if (!user.customerId) return;
++  billing.updateCustomer(user.customerId, { email: user.email });
+   return true;
+ }

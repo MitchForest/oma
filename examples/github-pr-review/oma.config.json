@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "workspace": "../..",
+  "harness": {
+    "kind": "mock"
+  },
+  "session": {
+    "kind": "jsonl",
+    "dir": ".oma/sessions"
+  },
+  "validation": [
+    {
+      "kind": "artifactExists",
+      "paths": [".oma/pr-review-summary.md", ".oma/pr-review-findings.json"]
+    },
+    {
+      "kind": "schema",
+      "artifact": ".oma/pr-review-findings.json",
+      "schema": {
+        "type": "object",
+        "required": ["schemaVersion", "summary", "findings"],
+        "properties": {
+          "schemaVersion": {
+            "type": "number"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "findings": {
+            "type": "array"
+          }
+        }
+      }
+    }
+  ]
+}

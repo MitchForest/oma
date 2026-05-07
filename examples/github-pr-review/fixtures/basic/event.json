@@ -1,0 +1,13 @@
+{
+  "repository": {
+    "fullName": "oma/example"
+  },
+  "pullRequest": {
+    "number": 42,
+    "baseSha": "1111111",
+    "headSha": "2222222"
+  },
+  "trigger": {
+    "command": "oma review verbose=true"
+  }
+}

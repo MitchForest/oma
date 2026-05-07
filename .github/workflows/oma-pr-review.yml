@@ -1,0 +1,67 @@
+name: OMA PR Review
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  review:
+    if: github.event.issue.pull_request && (contains(github.event.comment.body, 'oma review') || contains(github.event.comment.body, 'bugbot run') || contains(github.event.comment.body, 'cursor review'))
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout trusted workflow code
+        uses: actions/checkout@v4
+
+      - name: Resolve PR head
+        id: pr
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.issue.number }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          pr_json="$(gh pr view "$PR_NUMBER" --repo "$REPOSITORY" --json headRefName,headRepositoryOwner,headRepository,headRefOid)"
+          head_owner="$(printf '%s' "$pr_json" | jq -r '.headRepositoryOwner.login')"
+          repo_owner="${REPOSITORY%%/*}"
+          if [ "$head_owner" != "$repo_owner" ]; then
+            echo "Fork PRs are skipped by this read-only POC workflow."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+          echo "sha=$(printf '%s' "$pr_json" | jq -r '.headRefOid')" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout PR head
+        if: steps.pr.outputs.skip != 'true'
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.pr.outputs.sha }}
+
+      - name: Setup Bun
+        if: steps.pr.outputs.skip != 'true'
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install
+        if: steps.pr.outputs.skip != 'true'
+        run: bun install --frozen-lockfile
+
+      - name: Review PR
+        if: steps.pr.outputs.skip != 'true'
+        run: bun run examples/github-pr-review/src/index.ts -- --dry-run=false
+        env:
+          GITHUB_EVENT_PATH: ${{ github.event_path }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_MODEL: ${{ vars.OPENAI_MODEL || 'gpt-5' }}
+
+      - name: Upload OMA artifacts
+        if: always() && steps.pr.outputs.skip != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: oma-pr-review
+          path: .oma

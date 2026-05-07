@@ -1,0 +1,17 @@
+{
+  "title": "Guard deleted users in billing sync",
+  "body": "Updates billing sync behavior.",
+  "author": "mitch",
+  "baseBranch": "main",
+  "headBranch": "billing-sync",
+  "files": [
+    {
+      "filename": "src/billing.ts",
+      "status": "modified",
+      "additions": 2,
+      "deletions": 1,
+      "patch": "@@ -10,3 +10,4 @@"
+    }
+  ],
+  "existingFindingIds": []
+}
