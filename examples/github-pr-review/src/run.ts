@@ -56,6 +56,14 @@ function requireOpenAIApiKey(): string {
   return apiKey;
 }
 
+function failureMessage(outcome: ReviewRunResult["outcome"]): string | undefined {
+  const failed = [...outcome.events].reverse().find((event) => event.type === "run.failed");
+  if (!failed || failed.type !== "run.failed") {
+    return undefined;
+  }
+  return typeof failed.data.message === "string" ? failed.data.message : undefined;
+}
+
 function reviewHarness(input: {
   root: string;
   baseHarness?: Harness;
@@ -173,7 +181,12 @@ export async function runReview(input: {
 
   const findingsArtifact = outcome.artifacts.find((artifact) => artifact.name === findingsJsonPath);
   if (!findingsArtifact) {
-    throw new Error("Review run did not produce findings artifact.");
+    const message = failureMessage(outcome);
+    throw new Error(
+      message
+        ? `Review run did not produce findings artifact: ${message}`
+        : `Review run did not produce findings artifact. Outcome status: ${outcome.status}`,
+    );
   }
 
   const findings = JSON.parse(findingsArtifact.content) as ReviewFindingsArtifact;
