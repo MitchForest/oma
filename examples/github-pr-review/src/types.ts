@@ -41,19 +41,37 @@ export type PullRequestContext = {
   existingFindingIds: string[];
 };
 
-export type ReviewSeverity = "blocking" | "high" | "medium" | "low";
+export type ReviewRisk = "high" | "medium" | "low";
 export type ReviewConfidence = "high" | "medium" | "low";
+export type ReviewCategory =
+  | "api_contract"
+  | "backwards_compatibility"
+  | "concurrency"
+  | "data_integrity"
+  | "database_migration"
+  | "error_handling"
+  | "hidden_path"
+  | "logic_error"
+  | "observability"
+  | "performance"
+  | "security"
+  | "tech_debt"
+  | "test_gap"
+  | "unnecessary_shim";
 
 export type ReviewFinding = {
   id: string;
-  severity: ReviewSeverity;
+  risk: ReviewRisk;
   confidence: ReviewConfidence;
+  category: ReviewCategory;
   file: string;
-  line?: number;
+  line: number;
   side: "RIGHT" | "LEFT";
   title: string;
   body: string;
-  suggestion?: string;
+  whyItMatters: string;
+  suggestedFix: string;
+  validation: string[];
   evidence: string[];
 };
 
@@ -65,7 +83,7 @@ export type ReviewFindingsArtifact = {
 
 export type ReviewPolicy = {
   maxInlineComments: number;
-  inlineSeverity: ReviewSeverity[];
+  inlineRisk: ReviewRisk[];
   inlineConfidence: ReviewConfidence[];
   excludePaths: string[];
 };

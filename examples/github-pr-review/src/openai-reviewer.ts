@@ -7,6 +7,7 @@ import type {
 } from "@oma/runtime";
 import { artifacts } from "@oma/runtime";
 import { renderFindingsMarkdown } from "./findings";
+import { reviewInput, reviewInstructions } from "./review-policy";
 import type { PullRequestContext, ReviewFindingsArtifact } from "./types";
 
 type ResponsesOutputItem =
@@ -277,27 +278,49 @@ function reviewSchema() {
           additionalProperties: false,
           required: [
             "id",
-            "severity",
+            "risk",
             "confidence",
+            "category",
             "file",
             "line",
             "side",
             "title",
             "body",
-            "suggestion",
+            "whyItMatters",
+            "suggestedFix",
+            "validation",
             "evidence",
           ],
           properties: {
             id: {
               type: "string",
             },
-            severity: {
+            risk: {
               type: "string",
-              enum: ["blocking", "high", "medium", "low"],
+              enum: ["high", "medium", "low"],
             },
             confidence: {
               type: "string",
               enum: ["high", "medium", "low"],
+            },
+            category: {
+              type: "string",
+              enum: [
+                "api_contract",
+                "backwards_compatibility",
+                "concurrency",
+                "data_integrity",
+                "database_migration",
+                "error_handling",
+                "hidden_path",
+                "logic_error",
+                "observability",
+                "performance",
+                "security",
+                "tech_debt",
+                "test_gap",
+                "unnecessary_shim",
+              ],
             },
             file: {
               type: "string",
@@ -315,8 +338,17 @@ function reviewSchema() {
             body: {
               type: "string",
             },
-            suggestion: {
+            whyItMatters: {
               type: "string",
+            },
+            suggestedFix: {
+              type: "string",
+            },
+            validation: {
+              type: "array",
+              items: {
+                type: "string",
+              },
             },
             evidence: {
               type: "array",
@@ -329,35 +361,6 @@ function reviewSchema() {
       },
     },
   };
-}
-
-function initialPrompt(context: PullRequestContext): string {
-  return [
-    "You are OMA PR Review, a read-only code review agent.",
-    "",
-    "You may inspect the repository using only the provided read-only tools.",
-    "You must not request writes, installs, network access, or destructive commands.",
-    "Prioritize correctness, security, data loss, migrations, concurrency, tests, and user-visible regressions.",
-    "Avoid style-only, speculative, or preference comments.",
-    "Only report actionable findings grounded in changed-line evidence.",
-    "Return JSON matching the schema. Use an empty findings array when there are no high-signal issues.",
-    "",
-    `Repository: ${context.request.repository.fullName}`,
-    `PR: #${String(context.request.pullRequest.number)} ${context.title}`,
-    `Author: ${context.author}`,
-    `Base: ${context.baseBranch} ${context.request.pullRequest.baseSha}`,
-    `Head: ${context.headBranch} ${context.request.pullRequest.headSha}`,
-    "",
-    "PR body:",
-    context.body || "(empty)",
-    "",
-    "Changed files:",
-    context.files.map((file) => `- ${file.filename} (${file.status})`).join("\n") ||
-      "- No changed files.",
-    "",
-    "Diff:",
-    context.diff,
-  ].join("\n");
 }
 
 function outputText(body: ResponsesBody): string {
@@ -400,6 +403,7 @@ async function createResponse(input: {
       reasoning: {
         effort: input.reasoningEffort,
       },
+      instructions: reviewInstructions(),
       input: input.conversation,
       tools: tools(),
       text: {
@@ -438,7 +442,7 @@ export function openAIReadOnlyReviewHarness(input: OpenAIReviewHarnessInput): Ha
       const conversation: unknown[] = [
         {
           role: "user",
-          content: initialPrompt(input.context),
+          content: reviewInput(input.context),
         },
       ];
 

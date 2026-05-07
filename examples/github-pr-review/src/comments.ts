@@ -10,7 +10,7 @@ import type {
 
 export const defaultReviewPolicy: ReviewPolicy = {
   maxInlineComments: 10,
-  inlineSeverity: ["blocking", "high"],
+  inlineRisk: ["high"],
   inlineConfidence: ["high", "medium"],
   excludePaths: ["dist/**", "bun.lock", "package-lock.json"],
 };
@@ -28,10 +28,27 @@ function isExcluded(path: string, policy: ReviewPolicy): boolean {
 
 function findingBody(finding: ReviewFinding): string {
   const evidence = finding.evidence.map((item) => `- ${item}`).join("\n");
-  const suggestion = finding.suggestion ? `\n\nSuggested fix:\n\n${finding.suggestion}` : "";
-  return [`**${finding.title}**`, "", finding.body, suggestion, "", "Evidence:", evidence].join(
-    "\n",
-  );
+  const validation = finding.validation.map((item) => `- ${item}`).join("\n");
+  return [
+    `**${finding.title}**`,
+    "",
+    `Risk: ${finding.risk}`,
+    `Category: ${finding.category}`,
+    "",
+    finding.body,
+    "",
+    "Why it matters:",
+    finding.whyItMatters,
+    "",
+    "Suggested fix:",
+    finding.suggestedFix,
+    "",
+    "Evidence:",
+    evidence,
+    "",
+    "Validation:",
+    validation,
+  ].join("\n");
 }
 
 function skipReason(input: {
@@ -46,14 +63,11 @@ function skipReason(input: {
   if (isExcluded(input.finding.file, input.policy)) {
     return "excluded path";
   }
-  if (!input.policy.inlineSeverity.includes(input.finding.severity)) {
-    return "severity below inline threshold";
+  if (!input.policy.inlineRisk.includes(input.finding.risk)) {
+    return "risk below inline threshold";
   }
   if (!input.policy.inlineConfidence.includes(input.finding.confidence)) {
     return "confidence below inline threshold";
-  }
-  if (!input.finding.line) {
-    return "missing line";
   }
   if (input.finding.side !== "RIGHT") {
     return "left-side comments are not posted by this POC";
@@ -106,10 +120,8 @@ export function planReviewComments(input: {
       ? "No high-signal findings."
       : input.artifact.findings
           .map((finding) => {
-            const location = finding.line
-              ? `${finding.file}:${String(finding.line)}`
-              : finding.file;
-            return `- <!-- oma-finding:${finding.id} -->${finding.severity}/${finding.confidence}: ${finding.title} (${location})`;
+            const location = `${finding.file}:${String(finding.line)}`;
+            return `- <!-- oma-finding:${finding.id} -->${finding.risk}/${finding.confidence}/${finding.category}: ${finding.title} (${location})`;
           })
           .join("\n");
 

@@ -158,12 +158,18 @@ describe("OpenAI read-only reviewer harness", () => {
     });
 
     expect(readPaths).toEqual(["src/app.ts"]);
-    expect(requestBodies[0]).toMatchObject({
-      model: "gpt-5.5",
-      reasoning: {
-        effort: "medium",
-      },
+    const firstRequest = requestBodies[0] as {
+      instructions?: unknown;
+      model?: unknown;
+      reasoning?: unknown;
+    };
+    expect(firstRequest.model).toBe("gpt-5.5");
+    expect(firstRequest.reasoning).toEqual({
+      effort: "medium",
     });
+    const instructions = JSON.stringify(firstRequest.instructions);
+    expect(instructions.includes("Prefer simple, explicit code.")).toBe(true);
+    expect(instructions.includes("unnecessary wrapper, shim, adapter, or facade")).toBe(true);
     expect(result.artifacts.map((artifact) => artifact.name)).toEqual([
       ".oma/pr-review-summary.md",
       ".oma/pr-review-findings.json",

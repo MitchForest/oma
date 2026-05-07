@@ -29,7 +29,7 @@ export function buildReviewObjective(context: PullRequestContext): Objective {
       "Write `.oma/pr-review-summary.md` with a concise PR walkthrough and verdict.",
       "Write `.oma/pr-review-findings.json` using schemaVersion 1 with summary and findings.",
       "Write `.oma/pr-review-findings.md` as a readable findings report.",
-      "Each finding includes severity, confidence, file, line when available, title, body, and evidence.",
+      "Each finding includes risk, confidence, category, file, line, title, body, why it matters, evidence, suggested fix, and validation.",
     ],
   });
 }

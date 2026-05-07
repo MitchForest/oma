@@ -4,17 +4,20 @@
   "findings": [
     {
       "id": "billing-deleted-user-sync",
-      "severity": "high",
+      "risk": "high",
       "confidence": "high",
+      "category": "logic_error",
       "file": "src/billing.ts",
       "line": 11,
       "side": "RIGHT",
       "title": "Deleted users can still update billing records",
       "body": "The new billing update runs whenever a customer id exists, but the function no longer checks whether the user has been deleted. That can revive or mutate billing records for deleted accounts.",
-      "suggestion": "Return before updating billing when `user.deletedAt` is set.",
+      "whyItMatters": "Deleted accounts should not mutate external billing state because that can reactivate customer records or send updates for users who should be inactive.",
+      "suggestedFix": "Return before updating billing when `user.deletedAt` is set.",
       "evidence": [
         "The added line updates the external customer record without checking deletion state."
-      ]
+      ],
+      "validation": ["Add or update a test covering a deleted user with a customer id."]
     }
   ]
 }

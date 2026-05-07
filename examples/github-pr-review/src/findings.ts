@@ -1,7 +1,23 @@
 import type { ReviewFinding, ReviewFindingsArtifact } from "./types";
 
-const severities = new Set(["blocking", "high", "medium", "low"]);
+const risks = new Set(["high", "medium", "low"]);
 const confidences = new Set(["high", "medium", "low"]);
+const categories = new Set([
+  "api_contract",
+  "backwards_compatibility",
+  "concurrency",
+  "data_integrity",
+  "database_migration",
+  "error_handling",
+  "hidden_path",
+  "logic_error",
+  "observability",
+  "performance",
+  "security",
+  "tech_debt",
+  "test_gap",
+  "unnecessary_shim",
+]);
 const sides = new Set(["RIGHT", "LEFT"]);
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -29,38 +45,41 @@ function parseFinding(value: unknown): ReviewFinding {
     throw new Error("Each finding must be an object.");
   }
 
-  const severity = stringField(value, "severity");
+  const risk = stringField(value, "risk");
   const confidence = stringField(value, "confidence");
+  const category = stringField(value, "category");
   const side = stringField(value, "side");
-  if (!severities.has(severity)) {
-    throw new Error(`Invalid finding severity: ${severity}`);
+  if (!risks.has(risk)) {
+    throw new Error(`Invalid finding risk: ${risk}`);
   }
   if (!confidences.has(confidence)) {
     throw new Error(`Invalid finding confidence: ${confidence}`);
   }
+  if (!categories.has(category)) {
+    throw new Error(`Invalid finding category: ${category}`);
+  }
   if (!sides.has(side)) {
     throw new Error(`Invalid finding side: ${side}`);
   }
+  if (typeof value.line !== "number" || !Number.isInteger(value.line)) {
+    throw new Error("Finding field line must be an integer.");
+  }
 
-  const output: ReviewFinding = {
+  return {
     id: stringField(value, "id"),
-    severity: severity as ReviewFinding["severity"],
+    risk: risk as ReviewFinding["risk"],
     confidence: confidence as ReviewFinding["confidence"],
+    category: category as ReviewFinding["category"],
     file: stringField(value, "file"),
+    line: value.line,
     side: side as ReviewFinding["side"],
     title: stringField(value, "title"),
     body: stringField(value, "body"),
+    whyItMatters: stringField(value, "whyItMatters"),
+    suggestedFix: stringField(value, "suggestedFix"),
+    validation: stringArrayField(value, "validation"),
     evidence: stringArrayField(value, "evidence"),
   };
-
-  if (typeof value.line === "number" && Number.isInteger(value.line)) {
-    output.line = value.line;
-  }
-  if (typeof value.suggestion === "string" && value.suggestion.length > 0) {
-    output.suggestion = value.suggestion;
-  }
-
-  return output;
 }
 
 export function parseFindingsArtifact(content: string): ReviewFindingsArtifact {
@@ -92,21 +111,31 @@ export function renderFindingsMarkdown(artifact: ReviewFindingsArtifact): string
 
   const findings = artifact.findings
     .map((finding) => {
-      const location = finding.line ? `${finding.file}:${String(finding.line)}` : finding.file;
-      const suggestion = finding.suggestion ? `\n\nSuggested fix:\n\n${finding.suggestion}` : "";
+      const location = `${finding.file}:${String(finding.line)}`;
       return [
         `## ${finding.title}`,
         "",
         `- ID: ${finding.id}`,
-        `- Severity: ${finding.severity}`,
+        `- Risk: ${finding.risk}`,
         `- Confidence: ${finding.confidence}`,
+        `- Category: ${finding.category}`,
         `- Location: ${location}`,
         "",
         finding.body,
-        suggestion,
+        "",
+        "Why it matters:",
+        "",
+        finding.whyItMatters,
+        "",
+        "Suggested fix:",
+        "",
+        finding.suggestedFix,
         "",
         "Evidence:",
         ...finding.evidence.map((item) => `- ${item}`),
+        "",
+        "Validation:",
+        ...finding.validation.map((item) => `- ${item}`),
       ].join("\n");
     })
     .join("\n\n");

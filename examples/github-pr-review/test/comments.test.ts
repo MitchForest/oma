@@ -44,14 +44,18 @@ const artifact: ReviewFindingsArtifact = {
   findings: [
     {
       id: "dangerous-call",
-      severity: "high",
+      risk: "high",
       confidence: "high",
+      category: "logic_error",
       file: "src/app.ts",
       line: 2,
       side: "RIGHT",
       title: "Dangerous call is unconditional",
       body: "This newly added call has no guard.",
+      whyItMatters: "The changed behavior can execute a side effect on every call path.",
+      suggestedFix: "Guard the call behind the intended condition.",
       evidence: ["Line 2 is added in the PR diff."],
+      validation: ["Add a test for the guarded path."],
     },
   ],
 };
