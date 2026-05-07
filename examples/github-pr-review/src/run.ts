@@ -13,6 +13,7 @@ import { planReviewComments } from "./comments";
 import { renderFindingsMarkdown } from "./findings";
 import { openAIReadOnlyReviewHarness } from "./openai-reviewer";
 import { buildReviewObjective } from "./objective";
+import type { ReasoningEffort } from "./openai-reviewer";
 import type { PullRequestContext, ReviewFindingsArtifact, ReviewRunResult } from "./types";
 
 const metadataPath = ".oma/pr-review-metadata.json";
@@ -106,6 +107,7 @@ export async function runReview(input: {
   fixtureFindings?: ReviewFindingsArtifact;
   openAIApiKey?: string;
   openAIModel?: string;
+  openAIReasoningEffort?: ReasoningEffort;
 }): Promise<ReviewRunResult> {
   const project = await loadProject({
     cwd: input.cwd,
@@ -133,6 +135,9 @@ export async function runReview(input: {
     };
     if (input.openAIModel) {
       openAIHarnessInput.model = input.openAIModel;
+    }
+    if (input.openAIReasoningEffort) {
+      openAIHarnessInput.reasoningEffort = input.openAIReasoningEffort;
     }
     baseHarness = openAIReadOnlyReviewHarness(openAIHarnessInput);
   }

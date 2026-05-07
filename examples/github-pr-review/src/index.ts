@@ -4,6 +4,7 @@ import { GithubClient, commentIdFromGithubEvent } from "./github";
 import { loadFixtureContext, loadFixtureFindings } from "./fixtures";
 import { runReview } from "./run";
 import { reviewRequestFromFixture, reviewRequestFromGithubEvent } from "./trigger";
+import type { ReasoningEffort } from "./openai-reviewer";
 
 function argValue(args: string[], name: string): string | undefined {
   const index = args.indexOf(name);
@@ -16,6 +17,16 @@ function boolArg(args: string[], name: string, defaultValue: boolean): boolean {
     return defaultValue;
   }
   return value !== "false";
+}
+
+function reasoningEffort(value: string | undefined): ReasoningEffort | undefined {
+  if (!value) {
+    return undefined;
+  }
+  if (value === "low" || value === "medium" || value === "high" || value === "xhigh") {
+    return value;
+  }
+  throw new Error("Reasoning effort must be low, medium, high, or xhigh.");
 }
 
 async function main(): Promise<number> {
@@ -71,6 +82,12 @@ async function main(): Promise<number> {
   const model = argValue(args, "--model") ?? process.env.OPENAI_MODEL;
   if (model) {
     runInput.openAIModel = model;
+  }
+  const effort = reasoningEffort(
+    argValue(args, "--reasoning-effort") ?? process.env.OPENAI_REASONING_EFFORT,
+  );
+  if (effort) {
+    runInput.openAIReasoningEffort = effort;
   }
 
   const result = await runReview(runInput);

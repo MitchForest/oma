@@ -56,8 +56,11 @@ export GITHUB_EVENT_PATH="/path/to/issue_comment_event.json"
 Optional:
 
 ```sh
-export OPENAI_MODEL="gpt-5"
+export OPENAI_MODEL="gpt-5.5"
+export OPENAI_REASONING_EFFORT="medium"
 ```
+
+Reasoning effort may be `low`, `medium`, `high`, or `xhigh`. The default is `medium`, which is the balanced point for PR review latency and quality.
 
 ## GitHub Actions Sketch
 

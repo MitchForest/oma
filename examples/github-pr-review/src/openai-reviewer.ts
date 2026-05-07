@@ -30,18 +30,22 @@ export type OpenAIReviewHarnessInput = {
   apiKey: string;
   context: PullRequestContext;
   model?: string;
+  reasoningEffort?: ReasoningEffort;
   maxToolRounds?: number;
   maxReadBytes?: number;
   maxCommandBytes?: number;
   fetch?: FetchLike;
 };
 
+export type ReasoningEffort = "low" | "medium" | "high" | "xhigh";
+
 type FetchLike = (
   input: Parameters<typeof fetch>[0],
   init?: Parameters<typeof fetch>[1],
 ) => Promise<Response>;
 
-const defaultModel = "gpt-5";
+const defaultModel = "gpt-5.5";
+const defaultReasoningEffort: ReasoningEffort = "medium";
 const defaultMaxToolRounds = 8;
 const defaultMaxReadBytes = 24_000;
 const defaultMaxCommandBytes = 24_000;
@@ -382,6 +386,7 @@ async function createResponse(input: {
   apiKey: string;
   fetchImpl: FetchLike;
   model: string;
+  reasoningEffort: ReasoningEffort;
   conversation: unknown[];
 }): Promise<ResponsesBody> {
   const response = await input.fetchImpl("https://api.openai.com/v1/responses", {
@@ -392,6 +397,9 @@ async function createResponse(input: {
     },
     body: JSON.stringify({
       model: input.model,
+      reasoning: {
+        effort: input.reasoningEffort,
+      },
       input: input.conversation,
       tools: tools(),
       text: {
@@ -422,6 +430,7 @@ export function openAIReadOnlyReviewHarness(input: OpenAIReviewHarnessInput): Ha
 
     async run(harnessInput: HarnessInput) {
       const model = input.model ?? defaultModel;
+      const reasoningEffort = input.reasoningEffort ?? defaultReasoningEffort;
       const maxToolRounds = input.maxToolRounds ?? defaultMaxToolRounds;
       const maxReadBytes = input.maxReadBytes ?? defaultMaxReadBytes;
       const maxCommandBytes = input.maxCommandBytes ?? defaultMaxCommandBytes;
@@ -445,6 +454,7 @@ export function openAIReadOnlyReviewHarness(input: OpenAIReviewHarnessInput): Ha
           apiKey: input.apiKey,
           fetchImpl,
           model,
+          reasoningEffort,
           conversation,
         });
         const calls = (response.output ?? []).filter(

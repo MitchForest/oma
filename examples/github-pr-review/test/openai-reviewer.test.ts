@@ -47,11 +47,13 @@ const context: PullRequestContext = {
 describe("OpenAI read-only reviewer harness", () => {
   test("uses read-only tools and returns review artifacts", async () => {
     const readPaths: string[] = [];
+    const requestBodies: unknown[] = [];
     let requestCount = 0;
     const harness = openAIReadOnlyReviewHarness({
       apiKey: "test-key",
       context,
-      fetch: async () => {
+      fetch: async (_url, init) => {
+        requestBodies.push(JSON.parse(String(init?.body)) as unknown);
         requestCount += 1;
         if (requestCount === 1) {
           return new Response(
@@ -156,6 +158,12 @@ describe("OpenAI read-only reviewer harness", () => {
     });
 
     expect(readPaths).toEqual(["src/app.ts"]);
+    expect(requestBodies[0]).toMatchObject({
+      model: "gpt-5.5",
+      reasoning: {
+        effort: "medium",
+      },
+    });
     expect(result.artifacts.map((artifact) => artifact.name)).toEqual([
       ".oma/pr-review-summary.md",
       ".oma/pr-review-findings.json",
