@@ -391,41 +391,74 @@ async function createResponse(input: {
   model: string;
   reasoningEffort: ReasoningEffort;
   conversation: unknown[];
+  allowTools: boolean;
 }): Promise<ResponsesBody> {
+  const requestBody: Record<string, unknown> = {
+    model: input.model,
+    reasoning: {
+      effort: input.reasoningEffort,
+    },
+    instructions: reviewInstructions(),
+    input: input.conversation,
+    text: {
+      format: {
+        type: "json_schema",
+        name: "oma_pr_review",
+        strict: true,
+        schema: reviewSchema(),
+      },
+    },
+  };
+  if (input.allowTools) {
+    requestBody.tools = tools();
+  }
+
   const response = await input.fetchImpl("https://api.openai.com/v1/responses", {
     method: "POST",
     headers: {
       authorization: `Bearer ${input.apiKey}`,
       "content-type": "application/json",
     },
-    body: JSON.stringify({
-      model: input.model,
-      reasoning: {
-        effort: input.reasoningEffort,
-      },
-      instructions: reviewInstructions(),
-      input: input.conversation,
-      tools: tools(),
-      text: {
-        format: {
-          type: "json_schema",
-          name: "oma_pr_review",
-          strict: true,
-          schema: reviewSchema(),
-        },
-      },
-    }),
+    body: JSON.stringify(requestBody),
   });
 
-  const body = (await response.json().catch(() => ({}))) as unknown;
+  const responseBody = (await response.json().catch(() => ({}))) as unknown;
   if (!response.ok) {
     const message =
-      typeof body === "object" && body !== null && "error" in body
-        ? JSON.stringify(body.error)
+      typeof responseBody === "object" && responseBody !== null && "error" in responseBody
+        ? JSON.stringify(responseBody.error)
         : response.statusText;
     throw new Error(`OpenAI review failed: ${String(response.status)} ${message}`);
   }
-  return body as ResponsesBody;
+  return responseBody as ResponsesBody;
+}
+
+function findingsArtifacts(findings: ReviewFindingsArtifact) {
+  return [
+    artifacts.custom({
+      name: ".oma/pr-review-summary.md",
+      mediaType: "text/markdown",
+      content: `${findings.summary}\n`,
+    }),
+    artifacts.custom({
+      name: ".oma/pr-review-findings.json",
+      mediaType: "application/json",
+      content: `${JSON.stringify(findings, null, 2)}\n`,
+    }),
+    artifacts.custom({
+      name: ".oma/pr-review-findings.md",
+      mediaType: "text/markdown",
+      content: renderFindingsMarkdown(findings),
+    }),
+  ];
+}
+
+function findingsFromResponse(response: ResponsesBody): ReviewFindingsArtifact {
+  const text = outputText(response);
+  if (!text) {
+    throw new Error("OpenAI review completed without text output.");
+  }
+  return JSON.parse(text) as ReviewFindingsArtifact;
 }
 
 export function openAIReadOnlyReviewHarness(input: OpenAIReviewHarnessInput): Harness {
@@ -460,6 +493,7 @@ export function openAIReadOnlyReviewHarness(input: OpenAIReviewHarnessInput): Ha
           model,
           reasoningEffort,
           conversation,
+          allowTools: true,
         });
         const calls = (response.output ?? []).filter(
           (item): item is Extract<ResponsesOutputItem, { type: "function_call" }> =>
@@ -467,29 +501,9 @@ export function openAIReadOnlyReviewHarness(input: OpenAIReviewHarnessInput): Ha
         );
 
         if (calls.length === 0) {
-          const text = outputText(response);
-          if (!text) {
-            throw new Error("OpenAI review completed without text output.");
-          }
-          const findings = JSON.parse(text) as ReviewFindingsArtifact;
+          const findings = findingsFromResponse(response);
           return {
-            artifacts: [
-              artifacts.custom({
-                name: ".oma/pr-review-summary.md",
-                mediaType: "text/markdown",
-                content: `${findings.summary}\n`,
-              }),
-              artifacts.custom({
-                name: ".oma/pr-review-findings.json",
-                mediaType: "application/json",
-                content: `${JSON.stringify(findings, null, 2)}\n`,
-              }),
-              artifacts.custom({
-                name: ".oma/pr-review-findings.md",
-                mediaType: "text/markdown",
-                content: renderFindingsMarkdown(findings),
-              }),
-            ],
+            artifacts: findingsArtifacts(findings),
           };
         }
 
@@ -510,7 +524,23 @@ export function openAIReadOnlyReviewHarness(input: OpenAIReviewHarnessInput): Ha
         }
       }
 
-      throw new Error(`OpenAI review exceeded ${String(maxToolRounds)} tool rounds.`);
+      conversation.push({
+        role: "user",
+        content:
+          "Tool budget exhausted. Return the final JSON review now using only the evidence already gathered. Do not request more tools.",
+      });
+      const response = await createResponse({
+        apiKey: input.apiKey,
+        fetchImpl,
+        model,
+        reasoningEffort,
+        conversation,
+        allowTools: false,
+      });
+      const findings = findingsFromResponse(response);
+      return {
+        artifacts: findingsArtifacts(findings),
+      };
     },
   };
 }

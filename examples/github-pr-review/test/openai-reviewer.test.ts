@@ -176,4 +176,97 @@ describe("OpenAI read-only reviewer harness", () => {
       ".oma/pr-review-findings.md",
     ]);
   });
+
+  test("forces a final structured response after the tool budget is exhausted", async () => {
+    const requestBodies: unknown[] = [];
+    const harness = openAIReadOnlyReviewHarness({
+      apiKey: "test-key",
+      context,
+      maxToolRounds: 0,
+      fetch: async (_url, init) => {
+        const body = JSON.parse(String(init?.body)) as unknown;
+        requestBodies.push(body);
+        if (requestBodies.length === 1) {
+          return new Response(
+            JSON.stringify({
+              output: [
+                {
+                  type: "function_call",
+                  call_id: "call_1",
+                  name: "git_diff",
+                  arguments: "{}",
+                },
+              ],
+            }),
+          );
+        }
+        return new Response(
+          JSON.stringify({
+            output_text: JSON.stringify({
+              schemaVersion: 1,
+              summary: "No high-signal findings.",
+              findings: [],
+            }),
+          }),
+        );
+      },
+    });
+
+    const result = await harness.run({
+      runId: "run_test",
+      objective: {
+        goal: "review",
+        constraints: [],
+        success: [],
+      },
+      session: {
+        id: "session_test",
+        append: async (event) =>
+          ({
+            ...event,
+            id: "event_test",
+            schemaVersion: 1,
+            sequence: 1,
+            sessionId: "session_test",
+          }) as Event,
+        events: async () => [],
+      } as Session,
+      observe: async (event) => ({
+        id: "event_observed",
+        schemaVersion: 1,
+        sequence: 1,
+        sessionId: "session_test",
+        runId: "run_test",
+        type: "harness.observed",
+        at: new Date().toISOString(),
+        data: {
+          harnessId: "openai-readonly-review",
+          ...event,
+        },
+      }),
+      environment: {
+        kind: "test",
+        capabilities: {
+          filesystem: true,
+          git: true,
+          securityBoundary: false,
+          shell: true,
+        },
+        git: {
+          diff: async () => context.diff,
+          status: async () => ({
+            clean: false,
+            short: "M src/app.ts",
+          }),
+        },
+      },
+    });
+
+    expect(requestBodies).toHaveLength(2);
+    expect((requestBodies[0] as { tools?: unknown }).tools).toBeArray();
+    expect((requestBodies[1] as { tools?: unknown }).tools).toBeUndefined();
+    expect(result.artifacts.map((artifact) => artifact.name)).toContain(
+      ".oma/pr-review-findings.json",
+    );
+  });
 });
