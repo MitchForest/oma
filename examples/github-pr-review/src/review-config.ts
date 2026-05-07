@@ -148,12 +148,17 @@ function safeInstructionPath(path: string): string {
   if (isAbsolute(path) || path.split(/[\\/]/).includes("..")) {
     throw new Error(`review instruction path must be repository-relative: ${path}`);
   }
+  const segments = path.split("/");
   if (
-    path === ".env" ||
-    path.startsWith(".env.") ||
-    path.startsWith(".git/") ||
-    (path.startsWith(".oma/") && path !== ".oma/pr-review.md") ||
-    path.startsWith("node_modules/")
+    segments.some(
+      (segment) =>
+        segment === ".env" ||
+        segment.startsWith(".env.") ||
+        segment === ".git" ||
+        segment === "node_modules" ||
+        segment === ".oma",
+    ) &&
+    path !== ".oma/pr-review.md"
   ) {
     throw new Error(`review instruction path is sensitive and cannot be loaded: ${path}`);
   }

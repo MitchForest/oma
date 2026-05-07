@@ -107,6 +107,50 @@ describe("review config", () => {
     }
   });
 
+  test("rejects nested sensitive instruction paths", async () => {
+    const workspace = await tempDir();
+    try {
+      for (const path of [
+        "docs/.env",
+        "docs/.env.local",
+        "docs/.git/config",
+        "docs/node_modules/pkg/README.md",
+        "docs/.oma/pr-review.md",
+      ]) {
+        await expect(
+          loadRepositoryInstructions({
+            workspace,
+            files: [path],
+          }),
+        ).rejects.toThrow("sensitive");
+      }
+    } finally {
+      await rm(workspace, { recursive: true, force: true });
+    }
+  });
+
+  test("allows the dedicated OMA review instruction file", async () => {
+    const workspace = await tempDir();
+    try {
+      await mkdir(join(workspace, ".oma"));
+      await writeFile(join(workspace, ".oma", "pr-review.md"), "Use strict review criteria.");
+
+      const instructions = await loadRepositoryInstructions({
+        workspace,
+        files: [".oma/pr-review.md"],
+      });
+
+      expect(instructions).toEqual([
+        {
+          path: ".oma/pr-review.md",
+          content: "Use strict review criteria.",
+        },
+      ]);
+    } finally {
+      await rm(workspace, { recursive: true, force: true });
+    }
+  });
+
   test("rejects sensitive and symlinked instruction paths", async () => {
     const workspace = await tempDir();
     try {
