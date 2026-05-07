@@ -42,6 +42,12 @@ const context: PullRequestContext = {
     "+dangerousCall();",
   ].join("\n"),
   existingFindingIds: [],
+  repositoryInstructions: [
+    {
+      path: "AGENTS.md",
+      content: "Avoid hidden compatibility paths.",
+    },
+  ],
 };
 
 describe("OpenAI read-only reviewer harness", () => {
@@ -170,6 +176,9 @@ describe("OpenAI read-only reviewer harness", () => {
     const instructions = JSON.stringify(firstRequest.instructions);
     expect(instructions.includes("Prefer simple, explicit code.")).toBe(true);
     expect(instructions.includes("unnecessary wrapper, shim, adapter, or facade")).toBe(true);
+    const requestInput = JSON.stringify((requestBodies[0] as { input?: unknown }).input);
+    expect(requestInput.includes("--- AGENTS.md ---")).toBe(true);
+    expect(requestInput.includes("Avoid hidden compatibility paths.")).toBe(true);
     expect(result.artifacts.map((artifact) => artifact.name)).toEqual([
       ".oma/pr-review-summary.md",
       ".oma/pr-review-findings.json",

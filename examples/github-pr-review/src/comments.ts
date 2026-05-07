@@ -1,5 +1,6 @@
 import { hasChangedLine, parseChangedRightLines } from "./diff";
 import { summaryMarker } from "./markers";
+import { defaultReviewPolicy } from "./review-config";
 import type {
   PullRequestContext,
   ReviewCommentPlan,
@@ -14,18 +15,12 @@ import type {
 const ledgerMarkerStart = "<!-- oma-pr-review:ledger";
 const ledgerMarkerEnd = "oma-pr-review:ledger -->";
 
-export const defaultReviewPolicy: ReviewPolicy = {
-  maxInlineComments: 10,
-  inlineRisk: ["high"],
-  inlineConfidence: ["high", "medium"],
-  excludePaths: ["dist/**", "bun.lock", "package-lock.json"],
-};
-
 function matchesPattern(path: string, pattern: string): boolean {
-  if (pattern.endsWith("/**")) {
-    return path.startsWith(pattern.slice(0, -3));
-  }
-  return path === pattern;
+  const expression = pattern
+    .split("**")
+    .map((part) => part.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replaceAll("*", "[^/]*"))
+    .join(".*");
+  return new RegExp(`^${expression}$`).test(path);
 }
 
 function isExcluded(path: string, policy: ReviewPolicy): boolean {

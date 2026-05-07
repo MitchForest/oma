@@ -62,6 +62,37 @@ export OPENAI_REASONING_EFFORT="medium"
 
 Reasoning effort may be `low`, `medium`, `high`, or `xhigh`. The default is `medium`, which is the balanced point for PR review latency and quality.
 
+## Review Config
+
+The POC keeps review policy example-local in `examples/github-pr-review/review.config.json`.
+
+```json
+{
+  "maxInlineComments": 10,
+  "inlineRisk": ["high"],
+  "inlineConfidence": ["high", "medium"],
+  "excludePaths": ["dist/**", "node_modules/**", "bun.lock"],
+  "instructionFiles": [".oma/pr-review.md", "AGENTS.md", "CLAUDE.md", ".cursor/BUGBOT.md"]
+}
+```
+
+`maxInlineComments`, `inlineRisk`, `inlineConfidence`, and `excludePaths` control GitHub comment noise. Findings that do not pass those gates still remain in `.oma/pr-review-findings.json` and `.oma/pr-review-findings.md`.
+
+Use `--review-config <path>` to point at a different JSON config. Relative config paths are resolved from the example root.
+
+## Repo Instructions
+
+The reviewer reads optional repository instruction files before reviewing:
+
+```text
+.oma/pr-review.md
+AGENTS.md
+CLAUDE.md
+.cursor/BUGBOT.md
+```
+
+Missing files are ignored. Instruction paths must be repository-relative. These instructions are passed into the read-only review prompt and recorded in `.oma/pr-review-metadata.json` for inspectability.
+
 ## GitHub Actions Sketch
 
 ```yaml
@@ -127,6 +158,7 @@ The sticky summary stores a hidden ledger so later runs can distinguish new, sti
 .oma/pr-review-metadata.json
 .oma/pr-review-diff.patch
 .oma/pr-review-objective.json
+.oma/pr-review-config.json
 .oma/pr-review-summary.md
 .oma/pr-review-findings.json
 .oma/pr-review-findings.md
@@ -152,5 +184,6 @@ Current public APIs are enough for the POC scaffold:
 Pressure points to keep watching:
 
 - The read-only reviewer currently lives in the example. Promote only if more examples need the same harness shape.
+- Review config and repository instruction loading remain example-local. Promote only if multiple templates need the same application config pattern.
 - Large diffs may eventually need filesystem-backed artifact references instead of inline artifact content.
 - Rich finding validation may eventually need stronger schema support.

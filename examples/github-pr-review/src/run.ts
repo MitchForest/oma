@@ -13,6 +13,7 @@ import { planReviewComments } from "./comments";
 import { renderFindingsMarkdown } from "./findings";
 import { openAIReadOnlyReviewHarness } from "./openai-reviewer";
 import { buildReviewObjective } from "./objective";
+import { loadRepositoryInstructions, loadReviewConfig } from "./review-config";
 import type { ReasoningEffort } from "./openai-reviewer";
 import type { PullRequestContext, ReviewFindingsArtifact, ReviewRunResult } from "./types";
 
@@ -22,6 +23,7 @@ const objectivePath = ".oma/pr-review-objective.json";
 const summaryPath = ".oma/pr-review-summary.md";
 const findingsJsonPath = ".oma/pr-review-findings.json";
 const findingsMarkdownPath = ".oma/pr-review-findings.md";
+const configArtifactPath = ".oma/pr-review-config.json";
 const reviewArtifactNames = new Set([
   summaryPath,
   findingsJsonPath,
@@ -29,6 +31,7 @@ const reviewArtifactNames = new Set([
   metadataPath,
   diffPath,
   objectivePath,
+  configArtifactPath,
 ]);
 
 async function writeArtifactFile(root: string, path: string, content: string): Promise<void> {
@@ -97,6 +100,7 @@ function reviewHarness(input: {
       collectTextArtifact(input.root, metadataPath, "application/json"),
       collectTextArtifact(input.root, diffPath, "text/x-diff"),
       collectTextArtifact(input.root, objectivePath, "application/json"),
+      collectTextArtifact(input.root, configArtifactPath, "application/json"),
     ]);
 
     return {
@@ -112,6 +116,7 @@ export async function runReview(input: {
   cwd: string;
   configPath?: string;
   workspacePath?: string;
+  reviewConfigPath?: string;
   context: PullRequestContext;
   fixtureFindings?: ReviewFindingsArtifact;
   openAIApiKey?: string;
@@ -128,15 +133,28 @@ export async function runReview(input: {
         workspace: resolve(input.workspacePath),
       }
     : loadedProject;
-  const objective = buildReviewObjective(input.context);
+  const reviewConfig = await loadReviewConfig({
+    root: project.root,
+    configPath: input.reviewConfigPath,
+  });
+  const repositoryInstructions = await loadRepositoryInstructions({
+    workspace: project.workspace,
+    files: reviewConfig.instructionFiles,
+  });
+  const context: PullRequestContext = {
+    ...input.context,
+    repositoryInstructions,
+  };
+  const objective = buildReviewObjective(context);
 
+  await writeArtifactFile(project.root, metadataPath, `${JSON.stringify(context, null, 2)}\n`);
+  await writeArtifactFile(project.root, diffPath, context.diff);
+  await writeArtifactFile(project.root, objectivePath, `${JSON.stringify(objective, null, 2)}\n`);
   await writeArtifactFile(
     project.root,
-    metadataPath,
-    `${JSON.stringify(input.context, null, 2)}\n`,
+    configArtifactPath,
+    `${JSON.stringify(reviewConfig, null, 2)}\n`,
   );
-  await writeArtifactFile(project.root, diffPath, input.context.diff);
-  await writeArtifactFile(project.root, objectivePath, `${JSON.stringify(objective, null, 2)}\n`);
 
   const store = createSessionStore(project);
   const session = await store.create();
@@ -146,7 +164,7 @@ export async function runReview(input: {
   if (!input.fixtureFindings) {
     const openAIHarnessInput: Parameters<typeof openAIReadOnlyReviewHarness>[0] = {
       apiKey: input.openAIApiKey ?? requireOpenAIApiKey(),
-      context: input.context,
+      context,
     };
     if (input.openAIModel) {
       openAIHarnessInput.model = input.openAIModel;
@@ -191,8 +209,9 @@ export async function runReview(input: {
 
   const findings = JSON.parse(findingsArtifact.content) as ReviewFindingsArtifact;
   const plan = planReviewComments({
-    context: input.context,
+    context,
     artifact: findings,
+    policy: reviewConfig,
   });
 
   return {

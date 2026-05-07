@@ -99,6 +99,10 @@ async function main(): Promise<number> {
   if (workspacePath) {
     runInput.workspacePath = workspacePath;
   }
+  const reviewConfigPath = argValue(args, "--review-config");
+  if (reviewConfigPath) {
+    runInput.reviewConfigPath = reviewConfigPath;
+  }
   if (fixtureFindings) {
     runInput.fixtureFindings = fixtureFindings;
   }

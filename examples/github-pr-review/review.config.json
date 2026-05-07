@@ -1,0 +1,14 @@
+{
+  "maxInlineComments": 10,
+  "inlineRisk": ["high"],
+  "inlineConfidence": ["high", "medium"],
+  "excludePaths": [
+    "dist/**",
+    "node_modules/**",
+    "bun.lock",
+    "package-lock.json",
+    "pnpm-lock.yaml",
+    "yarn.lock"
+  ],
+  "instructionFiles": [".oma/pr-review.md", "AGENTS.md", "CLAUDE.md", ".cursor/BUGBOT.md"]
+}
