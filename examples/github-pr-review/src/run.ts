@@ -10,7 +10,11 @@ import {
 import { artifacts, harnesses, run } from "@oma/runtime";
 import type { Artifact, Harness } from "@oma/runtime";
 import { planReviewComments } from "./comments";
-import { renderFindingsMarkdown } from "./findings";
+import {
+  parseFindingsArtifact,
+  renderFindingsMarkdown,
+  renderFixPromptsMarkdown,
+} from "./findings";
 import { openAIReadOnlyReviewHarness } from "./openai-reviewer";
 import { buildReviewObjective } from "./objective";
 import { loadRepositoryInstructions, loadReviewConfig } from "./review-config";
@@ -23,11 +27,13 @@ const objectivePath = ".oma/pr-review-objective.json";
 const summaryPath = ".oma/pr-review-summary.md";
 const findingsJsonPath = ".oma/pr-review-findings.json";
 const findingsMarkdownPath = ".oma/pr-review-findings.md";
+const fixPromptsPath = ".oma/pr-review-fix-prompts.md";
 const configArtifactPath = ".oma/pr-review-config.json";
 const reviewArtifactNames = new Set([
   summaryPath,
   findingsJsonPath,
   findingsMarkdownPath,
+  fixPromptsPath,
   metadataPath,
   diffPath,
   objectivePath,
@@ -81,10 +87,12 @@ function reviewHarness(input: {
       const summary = input.fixtureFindings.summary;
       const findingsJson = `${JSON.stringify(input.fixtureFindings, null, 2)}\n`;
       const findingsMarkdown = renderFindingsMarkdown(input.fixtureFindings);
+      const fixPrompts = renderFixPromptsMarkdown(input.fixtureFindings);
 
       await writeArtifactFile(input.root, summaryPath, `${summary}\n`);
       await writeArtifactFile(input.root, findingsJsonPath, findingsJson);
       await writeArtifactFile(input.root, findingsMarkdownPath, findingsMarkdown);
+      await writeArtifactFile(input.root, fixPromptsPath, fixPrompts);
     }
 
     for (const artifact of baseArtifacts) {
@@ -93,10 +101,16 @@ function reviewHarness(input: {
       }
     }
 
+    const findings = parseFindingsArtifact(
+      await readFile(resolve(input.root, findingsJsonPath), "utf8"),
+    );
+    await writeArtifactFile(input.root, fixPromptsPath, renderFixPromptsMarkdown(findings));
+
     const reviewArtifacts = await Promise.all([
       collectTextArtifact(input.root, summaryPath, "text/markdown"),
       collectTextArtifact(input.root, findingsJsonPath, "application/json"),
       collectTextArtifact(input.root, findingsMarkdownPath, "text/markdown"),
+      collectTextArtifact(input.root, fixPromptsPath, "text/markdown"),
       collectTextArtifact(input.root, metadataPath, "application/json"),
       collectTextArtifact(input.root, diffPath, "text/x-diff"),
       collectTextArtifact(input.root, objectivePath, "application/json"),

@@ -152,6 +152,8 @@ adds a thumbs-up reaction when no findings are present
 
 The sticky summary stores a hidden ledger so later runs can distinguish new, still-open, and resolved findings without reposting the same inline comment.
 
+When findings are present, the summary points to `.oma/pr-review-fix-prompts.md`. That artifact is the handoff surface for Codex, Claude Code, OpenCode, or a human; the reviewer does not make commits or apply fixes automatically.
+
 ## Output Artifacts
 
 ```text
@@ -162,6 +164,7 @@ The sticky summary stores a hidden ledger so later runs can distinguish new, sti
 .oma/pr-review-summary.md
 .oma/pr-review-findings.json
 .oma/pr-review-findings.md
+.oma/pr-review-fix-prompts.md
 ```
 
 Use the normal OMA CLI to inspect the run:

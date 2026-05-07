@@ -142,3 +142,43 @@ export function renderFindingsMarkdown(artifact: ReviewFindingsArtifact): string
 
   return `# PR Review Findings\n\n${artifact.summary}\n\n${findings}\n`;
 }
+
+export function renderFixPromptsMarkdown(artifact: ReviewFindingsArtifact): string {
+  if (artifact.findings.length === 0) {
+    return `# PR Review Fix Handoff\n\n${artifact.summary}\n\nNo fix prompts.\n`;
+  }
+
+  const prompts = artifact.findings
+    .map((finding) => {
+      const location = `${finding.file}:${String(finding.line)}`;
+      return [
+        `## ${finding.id}: ${finding.title}`,
+        "",
+        `- Risk: ${finding.risk}`,
+        `- Confidence: ${finding.confidence}`,
+        `- Category: ${finding.category}`,
+        `- Location: ${location}`,
+        "",
+        "Minimal fix objective:",
+        "",
+        [
+          `Fix ${finding.title.toLowerCase()} at ${location}.`,
+          finding.suggestedFix,
+          "Keep the change explicit, focused, and covered by validation evidence.",
+        ].join(" "),
+        "",
+        "Why it matters:",
+        "",
+        finding.whyItMatters,
+        "",
+        "Relevant evidence:",
+        ...finding.evidence.map((item) => `- ${item}`),
+        "",
+        "Suggested validation:",
+        ...finding.validation.map((item) => `- ${item}`),
+      ].join("\n");
+    })
+    .join("\n\n");
+
+  return `# PR Review Fix Handoff\n\n${artifact.summary}\n\n${prompts}\n`;
+}

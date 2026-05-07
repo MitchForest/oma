@@ -1,5 +1,9 @@
 import { describe, expect, test } from "bun:test";
-import { parseFindingsArtifact, renderFindingsMarkdown } from "../src/findings";
+import {
+  parseFindingsArtifact,
+  renderFindingsMarkdown,
+  renderFixPromptsMarkdown,
+} from "../src/findings";
 import type { ReviewFinding, ReviewFindingsArtifact } from "../src/types";
 
 function finding(input: Partial<ReviewFinding> = {}): ReviewFinding {
@@ -63,5 +67,23 @@ describe("findings schema", () => {
     });
 
     expect(markdown).toContain("No findings.");
+  });
+
+  test("renders agent-ready fix handoff prompts", () => {
+    const markdown = renderFixPromptsMarkdown({
+      schemaVersion: 1,
+      summary: "One fix needed.",
+      findings: [finding()],
+    });
+
+    expect(markdown).toContain("# PR Review Fix Handoff");
+    expect(markdown).toContain("## hidden-fallback: Silent fallback hides missing configuration");
+    expect(markdown).toContain("Minimal fix objective:");
+    expect(markdown).toContain(
+      "Fix silent fallback hides missing configuration at src/config.ts:12.",
+    );
+    expect(markdown).toContain("Return an explicit configuration error when the value is absent.");
+    expect(markdown).toContain("Suggested validation:");
+    expect(markdown).toContain("- Add a test for missing required configuration.");
   });
 });

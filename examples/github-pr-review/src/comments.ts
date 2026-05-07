@@ -228,6 +228,10 @@ export function planReviewComments(input: {
             return `- <!-- oma-finding:${finding.id} -->${finding.risk}/${finding.confidence}/${finding.category}: ${finding.title} (${location})`;
           })
           .join("\n");
+  const fixHandoff =
+    input.artifact.findings.length === 0
+      ? undefined
+      : "Fix handoff: see `.oma/pr-review-fix-prompts.md` in the OMA artifacts.";
 
   return {
     summary: {
@@ -242,6 +246,7 @@ export function planReviewComments(input: {
         "### Findings",
         "",
         findingList,
+        ...(fixHandoff ? [fixHandoff] : []),
         "",
         "### Lifecycle",
         "",

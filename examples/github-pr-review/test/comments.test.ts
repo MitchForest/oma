@@ -67,6 +67,7 @@ describe("comment planning", () => {
     expect(plan.inline[0]?.path).toBe("src/app.ts");
     expect(plan.inline[0]?.line).toBe(2);
     expect(plan.stats.newFindings).toBe(1);
+    expect(plan.summary.body).toContain(".oma/pr-review-fix-prompts.md");
     expect(plan.summary.body).toContain("Still open: 0.");
   });
 

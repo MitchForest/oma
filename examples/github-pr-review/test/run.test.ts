@@ -27,6 +27,11 @@ describe("OMA review run", () => {
           (artifact) => artifact.name === ".oma/pr-review-findings.json",
         ),
       ).toBe(true);
+      const fixPrompts = result.outcome.artifacts.find(
+        (artifact) => artifact.name === ".oma/pr-review-fix-prompts.md",
+      );
+      expect(fixPrompts?.content).toContain("# PR Review Fix Handoff");
+      expect(fixPrompts?.content).toContain("Minimal fix objective:");
       expect(result.plan.inline).toHaveLength(1);
     } finally {
       await rm(cwd, {

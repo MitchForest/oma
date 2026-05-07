@@ -11,7 +11,11 @@
   "validation": [
     {
       "kind": "artifactExists",
-      "paths": [".oma/pr-review-summary.md", ".oma/pr-review-findings.json"]
+      "paths": [
+        ".oma/pr-review-summary.md",
+        ".oma/pr-review-findings.json",
+        ".oma/pr-review-fix-prompts.md"
+      ]
     },
     {
       "kind": "schema",
