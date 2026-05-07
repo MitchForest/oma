@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises";
+import { lstat, readFile, realpath } from "node:fs/promises";
 import { isAbsolute, relative, resolve } from "node:path";
 import type {
   RepositoryInstruction,
@@ -97,12 +97,16 @@ export async function loadReviewConfig(input: {
   root: string;
   configPath?: string | undefined;
 }): Promise<ReviewConfig> {
+  const hasExplicitConfigPath = input.configPath !== undefined;
   const path = resolveConfigPath(input.root, input.configPath ?? "review.config.json");
   let raw: string;
   try {
     raw = await readFile(path, "utf8");
   } catch (error) {
     if (error instanceof Error && "code" in error && error.code === "ENOENT") {
+      if (hasExplicitConfigPath) {
+        throw new Error(`explicit review config was not found: ${input.configPath}`);
+      }
       return defaultConfig();
     }
     throw error;
@@ -134,6 +138,15 @@ function safeInstructionPath(path: string): string {
   if (isAbsolute(path) || path.split(/[\\/]/).includes("..")) {
     throw new Error(`review instruction path must be repository-relative: ${path}`);
   }
+  if (
+    path === ".env" ||
+    path.startsWith(".env.") ||
+    path.startsWith(".git/") ||
+    (path.startsWith(".oma/") && path !== ".oma/pr-review.md") ||
+    path.startsWith("node_modules/")
+  ) {
+    throw new Error(`review instruction path is sensitive and cannot be loaded: ${path}`);
+  }
   return path;
 }
 
@@ -147,6 +160,7 @@ export async function loadRepositoryInstructions(input: {
   files: string[];
 }): Promise<RepositoryInstruction[]> {
   const instructions: RepositoryInstruction[] = [];
+  const workspaceReal = await realpath(input.workspace);
   for (const file of input.files) {
     const safePath = safeInstructionPath(file);
     const resolved = resolve(input.workspace, safePath);
@@ -154,6 +168,14 @@ export async function loadRepositoryInstructions(input: {
       throw new Error(`review instruction path escapes repository: ${safePath}`);
     }
     try {
+      const stat = await lstat(resolved);
+      if (stat.isSymbolicLink()) {
+        throw new Error(`review instruction path must not be a symlink: ${safePath}`);
+      }
+      const real = await realpath(resolved);
+      if (!isInside(workspaceReal, real)) {
+        throw new Error(`review instruction path escapes repository: ${safePath}`);
+      }
       instructions.push({
         path: safePath,
         content: await readFile(resolved, "utf8"),

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { loadRepositoryInstructions, loadReviewConfig } from "../src/review-config";
@@ -83,6 +83,43 @@ describe("review config", () => {
       ).rejects.toThrow("repository-relative");
     } finally {
       await rm(workspace, { recursive: true, force: true });
+    }
+  });
+
+  test("rejects sensitive and symlinked instruction paths", async () => {
+    const workspace = await tempDir();
+    try {
+      await writeFile(join(workspace, "real.md"), "Use explicit code.");
+      await symlink(join(workspace, "real.md"), join(workspace, "linked.md"));
+
+      await expect(
+        loadRepositoryInstructions({
+          workspace,
+          files: [".env"],
+        }),
+      ).rejects.toThrow("sensitive");
+      await expect(
+        loadRepositoryInstructions({
+          workspace,
+          files: ["linked.md"],
+        }),
+      ).rejects.toThrow("symlink");
+    } finally {
+      await rm(workspace, { recursive: true, force: true });
+    }
+  });
+
+  test("throws when an explicit review config is missing", async () => {
+    const root = await tempDir();
+    try {
+      await expect(
+        loadReviewConfig({
+          root,
+          configPath: "missing.json",
+        }),
+      ).rejects.toThrow("explicit review config was not found");
+    } finally {
+      await rm(root, { recursive: true, force: true });
     }
   });
 });
