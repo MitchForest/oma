@@ -61,6 +61,13 @@ export function reviewInput(context: PullRequestContext): string {
     "PR body:",
     context.body || "(empty)",
     "",
+    "Repository review instructions:",
+    context.repositoryInstructions?.length
+      ? context.repositoryInstructions
+          .map((item) => [`--- ${item.path} ---`, item.content].join("\n"))
+          .join("\n\n")
+      : "(none found)",
+    "",
     "Changed files:",
     context.files.map((file) => `- ${file.filename} (${file.status})`).join("\n") ||
       "- No changed files.",

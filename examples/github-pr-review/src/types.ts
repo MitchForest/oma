@@ -40,6 +40,12 @@ export type PullRequestContext = {
   existingSummaryCommentId?: number;
   existingFindingIds: string[];
   previousLedger?: ReviewLedger;
+  repositoryInstructions?: RepositoryInstruction[];
+};
+
+export type RepositoryInstruction = {
+  path: string;
+  content: string;
 };
 
 export type ReviewRisk = "high" | "medium" | "low";
@@ -118,6 +124,11 @@ export type ReviewPolicy = {
   inlineRisk: ReviewRisk[];
   inlineConfidence: ReviewConfidence[];
   excludePaths: string[];
+};
+
+export type ReviewConfig = ReviewPolicy & {
+  instructionFiles: string[];
+  maxInstructionBytes: number;
 };
 
 export type ReviewCommentPlan = {

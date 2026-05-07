@@ -115,4 +115,28 @@ describe("comment planning", () => {
     expect(secondPlan.skipped[0]?.reason).toBe("duplicate open finding");
     expect(secondPlan.stats.stillOpen).toBe(1);
   });
+
+  test("supports glob-style generated path exclusions", () => {
+    const plan = planReviewComments({
+      context,
+      artifact: {
+        ...artifact,
+        findings: [
+          {
+            ...artifact.findings[0]!,
+            file: "generated/client.ts",
+          },
+        ],
+      },
+      policy: {
+        maxInlineComments: 10,
+        inlineRisk: ["high"],
+        inlineConfidence: ["high"],
+        excludePaths: ["generated/**"],
+      },
+    });
+
+    expect(plan.inline).toHaveLength(0);
+    expect(plan.skipped[0]?.reason).toBe("excluded path");
+  });
 });

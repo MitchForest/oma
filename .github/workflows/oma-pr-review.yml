@@ -57,7 +57,7 @@ jobs:
       - name: Review PR
         if: steps.pr.outputs.skip != 'true'
         working-directory: reviewer
-        run: bun run examples/github-pr-review/src/index.ts -- --dry-run false --workspace "$GITHUB_WORKSPACE/workspace"
+        run: bun run examples/github-pr-review/src/index.ts -- --dry-run false --workspace "$GITHUB_WORKSPACE/workspace" --instruction-workspace "$GITHUB_WORKSPACE/reviewer"
         env:
           GITHUB_EVENT_PATH: ${{ github.event_path }}
           GITHUB_REPOSITORY: ${{ github.repository }}
