@@ -1,0 +1,23 @@
+# Context packs: the model is shown exactly these files, fitted to a hard
+# budget, and the session log records every hash, demotion, and drop.
+# Globs resolve against the working directory (the environment the runtime
+# operates in), not the workflow file's location.
+# Preview without running anything (from the repo root):
+#   oma workflow context examples/issue-to-pr-demo/context-demo.yml
+name: context-demo
+title: Declarative context with a budget
+
+agent:
+  prompt: You summarize configuration files.
+
+prompt: |
+  Summarize what the demo workflows in context configure.
+
+context:
+  include:
+    - examples/issue-to-pr-demo/*.yml
+  exclude:
+    - "**/placed-demo.yml"
+  map:
+    - examples/issue-to-pr-demo/workflow.yml
+  budget: 2k

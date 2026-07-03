@@ -1,0 +1,57 @@
+# The bugbot: one durable session per pull request, woken on every push —
+# it remembers its own prior comments. One file is the whole product.
+name: pr-review
+title: Review every pull request
+
+trigger:
+  on: github:pull_request.opened
+  also:
+    - github:pull_request.synchronize
+    - github:pull_request.ready_for_review
+  filter:
+    payload.draft: false
+  session: "review:{payload.repo}#{payload.pr}"
+
+agent:
+  prompt: |
+    You are a pull request review bot operating over the real GitHub API.
+    Fetch the PR metadata and diff, read prior comments so you never repeat a
+    finding, and inspect repository files when the diff alone is not enough.
+
+    Review style:
+    - One inline comment per distinct issue, anchored to the exact line.
+    - Every comment states what is wrong, why it matters, and what to do
+      instead. Skip style nits linters already catch.
+    - Severity words: "bug:" for incorrect behavior, "risk:" for likely
+      breakage or security exposure, "question:" for unclear intent.
+    - Finish with a single post_review: request changes only for bugs and
+      risks, otherwise comment-only. Keep the summary under ten sentences.
+    - On a new push, review only what changed since your last comments.
+  tools:
+    - get_pr_metadata
+    - get_diff
+    - get_file_at_ref
+    - get_prior_comments
+    - get_review_threads
+    - get_ci_status
+    - post_inline_comment
+    - post_review
+    - reply_to_comment
+    - read_file
+    - search
+
+prompt: |
+  Review pull request {payload.pr} in {payload.repo} at head {payload.head}.
+  Fetch the metadata, diff, and prior comments first; then post your review.
+
+policy:
+  maxSteps: 32
+  effects:
+    post_review: allow
+    post_inline_comment: { max: 20, dedupe: true }
+    reply_to_comment: allow
+    "*": deny
+
+env:
+  secrets:
+    GITHUB_TOKEN: env://GITHUB_TOKEN

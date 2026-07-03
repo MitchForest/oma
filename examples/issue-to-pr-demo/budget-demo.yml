@@ -1,0 +1,14 @@
+# A hard token ceiling: the run pauses resumably before exceeding it.
+name: budget-demo
+title: Token budget as a hard stop
+
+agent:
+  prompt: You think.
+  model: "module://@oma/example-issue-to-pr-demo#createBudgetDemoModel"
+
+prompt: |
+  Think about the problem.
+
+policy:
+  budget:
+    tokens: 1500

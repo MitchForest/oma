@@ -1,0 +1,56 @@
+# Sentry incident in, root-caused fix out. One durable session per issue;
+# the fix stage pauses for your approval before anything lands.
+name: incident-to-pr
+title: Incident to reviewed fix
+
+trigger:
+  on: sentry:issue.created
+  also:
+    - sentry:event_alert.triggered
+  session: "incident:{payload.issueId}"
+
+stages:
+  investigate:
+    agent:
+      prompt: You root-cause production incidents by reading code and evidence.
+      tools: [read_file, search, list_files, git_status, git_diff]
+    prompt: |
+      Investigate this Sentry incident:
+      title: {payload.title}
+      culprit: {payload.culprit}
+      link: {payload.permalink}
+      Find the root cause in this repository and report it.
+    output:
+      rootCause: string
+      confidence: high | medium | low
+
+  fix:
+    agent:
+      prompt: You write minimal fixes with regression tests.
+      tools:
+        - read_file
+        - write_file
+        - replace_in_file
+        - search
+        - list_files
+        - bash
+        - git_diff
+        - git_status
+        - run_tests
+    approve: true
+    prompt: |
+      Root cause: {stages.investigate.rootCause}
+      Implement a minimal fix with a regression test. Summarize the change.
+    output:
+      summary: string
+
+policy:
+  maxSteps: 24
+  budget:
+    tokens: 2M
+  effects:
+    write_file: allow
+    replace_in_file: allow
+    run_tests: allow
+    bash: { decision: allow, max: 30 }
+    "*": deny

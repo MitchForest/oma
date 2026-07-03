@@ -1,0 +1,15 @@
+{
+  "name": "@oma/example-issue-to-pr-demo",
+  "version": "0.0.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@oma/adapter-model-fake": "workspace:*",
+    "@oma/core": "workspace:*"
+  },
+  "devDependencies": {
+    "bun-types": "^1.2.17"
+  }
+}

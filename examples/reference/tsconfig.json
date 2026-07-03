@@ -1,0 +1,43 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "rootDir": "src",
+    "outDir": "dist",
+    "types": [
+      "bun-types"
+    ]
+  },
+  "include": [
+    "src"
+  ],
+  "references": [
+    {
+      "path": "../../packages/core"
+    },
+    {
+      "path": "../../packages/adapters/model-fake"
+    },
+    {
+      "path": "../../packages/adapters/sandbox-local"
+    },
+    {
+      "path": "../../packages/adapters/session-memory"
+    },
+    {
+      "path": "../../packages/adapters/tools-local"
+    },
+    {
+      "path": "../../packages/adapters/tools-mcp"
+    },
+    {
+      "path": "../../packages/adapters/trigger-github"
+    },
+    {
+      "path": "../pr-review-simulated"
+    }
+  ],
+  "exclude": [
+    "src/**/*.test.ts"
+  ]
+}

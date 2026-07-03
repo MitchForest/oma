@@ -1,0 +1,39 @@
+{
+  "name": "oma-run",
+  "version": "0.1.0",
+  "description": "Open Managed Agents: durable, forkable agent workflows",
+  "type": "module",
+  "bin": {
+    "oma": "dist/oma"
+  },
+  "files": [
+    "dist/oma",
+    "examples/issue-to-pr-demo",
+    "LICENSE",
+    "README.md",
+    "skills",
+    "templates"
+  ],
+  "engines": {
+    "bun": ">=1.3.0"
+  },
+  "workspaces": [
+    "packages/core",
+    "packages/workflows",
+    "packages/adapters/*",
+    "packages/cli",
+    "examples/*"
+  ],
+  "scripts": {
+    "clean": "rm -rf dist packages/*/dist packages/*/*.tsbuildinfo packages/adapters/*/dist packages/adapters/*/*.tsbuildinfo examples/*/dist examples/*/*.tsbuildinfo",
+    "build:cli": "bun build packages/cli/src/index.ts --target=bun --outfile=dist/oma",
+    "build": "bunx tsc -b --pretty false",
+    "test": "bun test",
+    "typecheck": "bunx tsc -b --pretty false",
+    "prepack": "bun run build:cli",
+    "check": "bun run clean && bun test && bun run build && bun run clean && git diff --check"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.3"
+  }
+}

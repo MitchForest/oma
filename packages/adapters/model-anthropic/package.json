@@ -1,0 +1,15 @@
+{
+  "name": "@oma/adapter-model-anthropic",
+  "version": "0.0.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@oma/core": "workspace:*"
+  },
+  "devDependencies": {
+    "bun-types": "^1.2.17",
+    "zod": "^3.25.67"
+  }
+}

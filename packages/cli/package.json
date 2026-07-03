@@ -1,0 +1,35 @@
+{
+  "name": "@oma/cli",
+  "version": "0.0.0",
+  "type": "module",
+  "bin": {
+    "oma": "./src/index.ts"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@oma/adapter-model-anthropic": "workspace:*",
+    "@oma/adapter-model-cli": "workspace:*",
+    "@oma/adapter-model-fake": "workspace:*",
+    "@oma/adapter-model-openai-compatible": "workspace:*",
+    "@oma/adapter-sandbox-docker": "workspace:*",
+    "@oma/adapter-sandbox-local": "workspace:*",
+    "@oma/adapter-sandbox-worktree": "workspace:*",
+    "@oma/adapter-session-memory": "workspace:*",
+    "@oma/adapter-session-postgres": "workspace:*",
+    "@oma/adapter-session-sqlite": "workspace:*",
+    "@oma/adapter-tools-github": "workspace:*",
+    "@oma/adapter-tools-local": "workspace:*",
+    "@oma/adapter-tools-mcp": "workspace:*",
+    "@oma/adapter-trigger-github": "workspace:*",
+    "@oma/adapter-trigger-http": "workspace:*",
+    "@oma/adapter-trigger-sentry": "workspace:*",
+    "@oma/core": "workspace:*",
+    "@oma/example-issue-to-pr-demo": "workspace:*",
+    "@oma/workflows": "workspace:*"
+  },
+  "devDependencies": {
+    "bun-types": "^1.2.17"
+  }
+}

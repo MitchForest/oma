@@ -1,0 +1,31 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "rootDir": "src",
+    "outDir": "dist",
+    "types": [
+      "bun-types"
+    ]
+  },
+  "include": [
+    "src"
+  ],
+  "references": [
+    {
+      "path": "../../packages/core"
+    },
+    {
+      "path": "../../packages/adapters/model-fake"
+    },
+    {
+      "path": "../../packages/adapters/session-memory"
+    },
+    {
+      "path": "../../packages/adapters/tools-github-simulated"
+    }
+  ],
+  "exclude": [
+    "src/**/*.test.ts"
+  ]
+}

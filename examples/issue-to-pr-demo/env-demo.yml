@@ -1,0 +1,16 @@
+# Secret refs resolve harness-side; only exposed names reach the sandbox env.
+name: env-demo
+title: Scoped secret exposure
+
+agent:
+  prompt: You inspect environments.
+  tools: [bash]
+  model: "module://@oma/example-issue-to-pr-demo#createEnvDemoModel"
+
+prompt: |
+  Print the DEMO_SECRET environment variable.
+
+env:
+  secrets:
+    DEMO_SECRET: env://OMA_DEMO_SECRET_SOURCE
+  expose: [DEMO_SECRET]

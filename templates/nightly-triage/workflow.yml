@@ -1,0 +1,26 @@
+# A recurring read-only sweep: run it from cron (or any scheduler) each night.
+name: nightly-triage
+title: Nightly repo triage
+
+agent:
+  prompt: |
+    You triage repositories: surface risks and unfinished work. You never
+    modify anything.
+  tools: [read_file, search, list_files, git_status, git_diff, bash]
+
+prompt: |
+  Triage this repository: check git status for uncommitted work, scan for
+  TODO/FIXME markers added recently, and summarize anything that needs a
+  human decision tomorrow morning.
+
+context:
+  include: ["README.md"]
+  budget: 20k
+
+policy:
+  maxSteps: 16
+  budget:
+    tokens: 500k
+  effects:
+    bash: { decision: allow, max: 10 }
+    "*": deny

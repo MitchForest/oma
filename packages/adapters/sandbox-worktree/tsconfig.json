@@ -1,0 +1,25 @@
+{
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "rootDir": "src",
+    "outDir": "dist",
+    "types": [
+      "bun-types"
+    ]
+  },
+  "include": [
+    "src"
+  ],
+  "references": [
+    {
+      "path": "../../core"
+    },
+    {
+      "path": "../sandbox-local"
+    }
+  ],
+  "exclude": [
+    "src/**/*.test.ts"
+  ]
+}

@@ -1,0 +1,53 @@
+# Execute with Codex (gpt-5.5, medium effort), review with Claude Code
+# (Opus 4.8) — both riding the credentials already logged into this machine.
+name: build-feature
+title: Codex executes, Claude Code reviews
+
+inputs:
+  feature:
+    required: true
+
+stages:
+  execute:
+    agent:
+      prompt: |
+        You are the executor working in this repository. Implement exactly
+        what is asked, with tests, keeping the existing style. Run the test
+        suite before declaring done.
+      model: "codex:gpt-5.5#medium"
+    prompt: |
+      Implement this feature: {inputs.feature}
+      When done, summarize what you changed and the test results.
+    reprompt: |
+      The reviewer requested changes: {stages.review.feedback}
+      Address every point, re-run the tests, and summarize what you changed.
+    output:
+      summary: string
+
+  review:
+    agent:
+      prompt: |
+        You are a strict code reviewer working in this repository. Read the
+        diff (git diff HEAD), read the changed files, and run the test suite
+        yourself. Approve only if the implementation is correct, tested, and
+        matches the request.
+      model: "claude-code:claude-opus-4-8"
+    prompt: |
+      The executor claims: {stages.execute.summary}
+      Review the working tree against this request: {inputs.feature}
+    reprompt: |
+      The executor revised: {stages.execute.summary}
+      Re-review the working tree.
+    output:
+      verdict: approve | revise
+      feedback: string
+
+loop:
+  over: [execute, review]
+  until: review.verdict == approve
+  max: 3
+
+policy:
+  maxSteps: 6
+  budget:
+    wall: 45m

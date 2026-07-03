@@ -1,0 +1,66 @@
+# Plan (with your approval), then an execute/review loop until the judge
+# approves. Give stages different models to route judgment and execution.
+name: issue-to-pr
+title: Issue in, reviewed change out
+
+inputs:
+  issue:
+    required: true
+    description: Issue number or a short description of what to fix
+
+stages:
+  plan:
+    agent:
+      prompt: You plan minimal, reviewable fixes.
+      tools: [read_file, search, list_files, git_status]
+    approve: true
+    prompt: |
+      Plan a minimal fix for issue {inputs.issue}. List what will change and why.
+    output:
+      summary: string
+
+  execute:
+    agent:
+      prompt: You implement approved plans with small, focused changes.
+      tools:
+        - read_file
+        - write_file
+        - replace_in_file
+        - search
+        - list_files
+        - bash
+        - git_status
+        - git_diff
+        - run_tests
+    prompt: |
+      Implement the approved plan: {stages.plan.summary}
+      Summarize exactly what you changed.
+    reprompt: |
+      The reviewer requested changes: {stages.review.feedback}
+      Address every point and summarize what you changed.
+    output:
+      summary: string
+
+  review:
+    agent:
+      prompt: You review implementations against their plan and return a strict verdict.
+      tools: [read_file, search, list_files, git_diff, git_status, run_tests]
+    prompt: |
+      Review the implementation: {stages.execute.summary}
+      It must fully cover the plan: {stages.plan.summary}
+    reprompt: |
+      Re-review after the revision: {stages.execute.summary}
+    output:
+      verdict: approve | revise
+      feedback: string
+
+loop:
+  over: [execute, review]
+  until: review.verdict == approve
+  max: 3
+
+policy:
+  maxSteps: 24
+  budget:
+    tokens: 2M
+    wall: 1h

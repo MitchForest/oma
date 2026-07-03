@@ -1,0 +1,18 @@
+# Policy gates in action: bash is denied outright, write_file needs approval.
+# The blast radius of this automation is fully readable below.
+name: effects-demo
+title: Deny and approve at the tool layer
+
+agent:
+  prompt: You tidy workspaces and write notes.
+  tools: [bash, write_file, read_file]
+  model: "module://@oma/example-issue-to-pr-demo#createEffectsDemoModel"
+
+prompt: |
+  Tidy up the workspace and write a summary note.
+
+policy:
+  maxSteps: 8
+  effects:
+    write_file: approve
+    bash: deny

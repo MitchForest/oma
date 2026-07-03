@@ -1,0 +1,77 @@
+{
+  "files": [],
+  "references": [
+    {
+      "path": "packages/core"
+    },
+    {
+      "path": "packages/workflows"
+    },
+    {
+      "path": "packages/adapters/session-memory"
+    },
+    {
+      "path": "packages/adapters/session-sqlite"
+    },
+    {
+      "path": "packages/adapters/session-postgres"
+    },
+    {
+      "path": "packages/adapters/sandbox-docker"
+    },
+    {
+      "path": "packages/adapters/sandbox-local"
+    },
+    {
+      "path": "packages/adapters/sandbox-worktree"
+    },
+    {
+      "path": "packages/adapters/model-cli"
+    },
+    {
+      "path": "packages/adapters/model-fake"
+    },
+    {
+      "path": "packages/adapters/model-anthropic"
+    },
+    {
+      "path": "packages/adapters/model-openai-compatible"
+    },
+    {
+      "path": "packages/adapters/tools-github"
+    },
+    {
+      "path": "packages/adapters/tools-github-simulated"
+    },
+    {
+      "path": "packages/adapters/tools-local"
+    },
+    {
+      "path": "packages/adapters/tools-mcp"
+    },
+    {
+      "path": "packages/adapters/trigger-github"
+    },
+    {
+      "path": "packages/adapters/trigger-http"
+    },
+    {
+      "path": "packages/adapters/trigger-sentry"
+    },
+    {
+      "path": "packages/cli"
+    },
+    {
+      "path": "examples/issue-to-pr-demo"
+    },
+    {
+      "path": "examples/minimal-replay"
+    },
+    {
+      "path": "examples/pr-review-simulated"
+    },
+    {
+      "path": "examples/reference"
+    }
+  ]
+}

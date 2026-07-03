@@ -1,0 +1,48 @@
+# The close-your-laptop shape: plan wherever you are, execute on a worker.
+# Start it locally; when it pauses, run `oma worker --name mac-mini` on any
+# machine sharing this store (same repo checkout) and the loop completes there.
+name: placed-demo
+title: Plan locally, execute on the mac mini
+
+inputs:
+  issue:
+    required: true
+
+stages:
+  plan:
+    agent:
+      prompt: You plan minimal fixes for issues.
+      model: "module://@oma/example-issue-to-pr-demo#createPlannerModel"
+    prompt: |
+      Plan a minimal fix for issue {inputs.issue}.
+    output:
+      summary: string
+
+  execute:
+    runs_on: worker:mac-mini
+    agent:
+      prompt: You implement approved plans.
+      model: "module://@oma/example-issue-to-pr-demo#createCoderModel"
+    prompt: |
+      Implement the plan: {stages.plan.summary}
+    reprompt: |
+      The reviewer requested changes: {stages.review.feedback}
+    output:
+      summary: string
+
+  review:
+    agent:
+      prompt: You review implementations and return a strict verdict.
+      model: "module://@oma/example-issue-to-pr-demo#createJudgeModel"
+    prompt: |
+      Review the implementation: {stages.execute.summary}
+    reprompt: |
+      Re-review after the revision: {stages.execute.summary}
+    output:
+      verdict: approve | revise
+      feedback: string
+
+loop:
+  over: [execute, review]
+  until: review.verdict == approve
+  max: 3

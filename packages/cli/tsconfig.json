@@ -1,0 +1,76 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "rootDir": "src",
+    "outDir": "dist",
+    "types": [
+      "bun-types"
+    ]
+  },
+  "include": [
+    "src"
+  ],
+  "references": [
+    {
+      "path": "../core"
+    },
+    {
+      "path": "../workflows"
+    },
+    {
+      "path": "../adapters/model-cli"
+    },
+    {
+      "path": "../adapters/model-anthropic"
+    },
+    {
+      "path": "../adapters/tools-github"
+    },
+    {
+      "path": "../adapters/trigger-github"
+    },
+    {
+      "path": "../adapters/model-fake"
+    },
+    {
+      "path": "../adapters/model-openai-compatible"
+    },
+    {
+      "path": "../adapters/sandbox-docker"
+    },
+    {
+      "path": "../adapters/sandbox-local"
+    },
+    {
+      "path": "../adapters/sandbox-worktree"
+    },
+    {
+      "path": "../adapters/session-memory"
+    },
+    {
+      "path": "../adapters/session-postgres"
+    },
+    {
+      "path": "../adapters/session-sqlite"
+    },
+    {
+      "path": "../adapters/tools-local"
+    },
+    {
+      "path": "../adapters/tools-mcp"
+    },
+    {
+      "path": "../adapters/trigger-http"
+    },
+    {
+      "path": "../adapters/trigger-sentry"
+    },
+    {
+      "path": "../../examples/issue-to-pr-demo"
+    }
+  ],
+  "exclude": [
+    "src/**/*.test.ts"
+  ]
+}

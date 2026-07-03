@@ -1,0 +1,18 @@
+{
+  "name": "@oma/example-pr-review-simulated",
+  "version": "0.0.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@oma/adapter-model-fake": "workspace:*",
+    "@oma/adapter-session-memory": "workspace:*",
+    "@oma/adapter-tools-github-simulated": "workspace:*",
+    "@oma/core": "workspace:*",
+    "zod": "^3.25.67"
+  },
+  "devDependencies": {
+    "bun-types": "^1.2.17"
+  }
+}
